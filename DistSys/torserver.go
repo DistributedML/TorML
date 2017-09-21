@@ -237,11 +237,8 @@ func runRouter(address string) {
 				outBuf = nil
 				
 		}
-
 	  	conn.Write(outBuf)
-
 	}
-
 }
 
 func testModel(study Study, node string) (float64, float64) {
@@ -356,11 +353,6 @@ func gradientUpdate(nodeId string, studyId string, deltas []float64) bool {
 	}
 
 	return exists
-
-}
-
-func fetchLocalModel(nodeName string) {
-
 }
 
 // Helper function to generate a random array of length numFeatures
