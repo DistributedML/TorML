@@ -188,9 +188,10 @@ def load_dataset(dataset_name):
                 "yvalid": yvalid}
 
     else:
-        data = pd.read_csv(os.path.join('../ML', "data", dataset_name + '.csv'))
-        #data = pd.read_csv(os.path.join('../data', dataset_name + '.csv'))
 
+        # This is the main section typically called by the tor client.
+        # Thus we have hardcoded an absolute path from that location
+        data = pd.read_csv(os.path.join('../ML', "data", dataset_name + '.csv'))
         d = data.shape[1]
 
         data = data.as_matrix()

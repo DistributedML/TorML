@@ -1,11 +1,13 @@
 package main
 
 import (
+	"encoding/csv"
 	"fmt"
 	"math/rand"
 	"net"
 	"net/http"
 	"os"
+	"strings"
 	"github.com/DistributedClocks/GoVector/govec"
 	"github.com/sbinet/go-python"
 )
@@ -22,10 +24,18 @@ type StudyInfo struct {
 	NumFeatures int
 }
 
+type ClientState struct {
+	NumIterations		int
+	IsComputingLocal 	bool
+	Weights 			[]float64
+}
+
 // An active study: list of participants and weights
 type Study struct {
-	Participants map[string]string // use a map just because its easier to search through
-	Weights 	 []float64
+	// use a map to store each local server's local updates
+	NumFeatures 	int
+	Clients 	 	map[string]ClientState
+	GlobalWeights 	[]float64
 }
 
 var (
@@ -50,17 +60,52 @@ func handler(w http.ResponseWriter, r *http.Request) {
     fmt.Fprintf(w, "Welcome %s!\n\n", r.URL.Path[1:])
 
     study, exists := myStudies[req]
+    
     if exists {
-    	train_error, test_error := testModel(study)
+
+    	train_error, test_error := testModel(study, "global")
     	fmt.Fprintf(w, "Train Loss: %f\n", train_error)	
     	fmt.Fprintf(w, "Test Loss: %f\n", test_error)	
+
+    	for node, clientState := range study.Clients {
+
+    		fmt.Fprintf(w, "\n");	
+    		train_error, test_error = testModel(study, node)
+    		fmt.Fprintf(w, "%s iterations: %d\n", node, clientState.NumIterations)	
+    		fmt.Fprintf(w, "%s train Loss: %f\n", node, train_error)	
+    		fmt.Fprintf(w, "%s test Loss: %f\n", node, test_error)	
+
+    	}
     }
 
+    if req == "flush" {
+    
+    	file, err := os.Create("models.csv")
+    	checkError(err)
+    	defer file.Close()
+
+    	writer := csv.NewWriter(file)
+    	defer writer.Flush()
+
+    	for _, study := range myStudies {
+
+    		st := strings.Fields(strings.Trim(fmt.Sprint(study.GlobalWeights), "[]"))
+    		writer.Write(st)
+
+    		for _, studyState := range study.Clients {
+    			st := strings.Fields(strings.Trim(fmt.Sprint(studyState.Weights), "[]"))
+    			writer.Write(st)
+    		}
+    	}
+
+    	fmt.Fprintf(w, "Model flushed.")
+
+    }
 }
 
 func httpHandler() {
 	http.HandleFunc("/", handler)
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(":6767", nil)
 
 	fmt.Printf("HTTP initialized.\n")
 }
@@ -126,37 +171,46 @@ func runRouter(address string) {
 	// TODO REMOVE
 	// fmt.Printf("Start sample study: %t\n", startStudy("study1", 101))
 
-	for {
+	fmt.Printf("Listening for TCP....\n")
 
-		fmt.Printf("Listening for TCP....\n")
+	for {
 
 		conn, err := ln.Accept()
 		checkError(err)
 
-		fmt.Println("Got message")
-
 		// Get the message from client
 		conn.Read(buf)
 
-		var incomingData MessageData
-		Logger.UnpackReceive("Received Message From Client", buf[0:], &incomingData)
+		var inData MessageData
+		Logger.UnpackReceive("Received Message From Client", buf[0:], &inData)
 	
 		var ok bool
 
-		switch incomingData.Type {
+		switch inData.Type {
 
 			// Client is sending a gradient update. Apply it and return myWeights
 			case "grad":
-				ok = gradientUpdate(incomingData.SourceNode, 
-					incomingData.Study.StudyId, 
-					incomingData.Deltas)
 
-				outBuf = Logger.PrepareSend("Replying", 
-					myStudies[incomingData.Study.StudyId].Weights)
+				ok = gradientUpdate(inData.SourceNode,
+					inData.Study.StudyId,
+					inData.Deltas)
+
+				clientState := myStudies[inData.Study.StudyId].Clients[inData.SourceNode]
+
+				// generates a float from 0 to 1
+				if rand.Float64() > 0.8 {
+					outBuf = Logger.PrepareSend("Replying", clientState.Weights)
+					clientState.IsComputingLocal = true
+				} else {
+					outBuf = Logger.PrepareSend("Replying", myStudies[inData.Study.StudyId].GlobalWeights)
+					clientState.IsComputingLocal = false
+				}
+
+				myStudies[inData.Study.StudyId].Clients[inData.SourceNode] = clientState
 			
 			// Add new nodes
 			case "join":
-				ok = processJoin(incomingData.SourceNode, incomingData.Study)
+				ok = processJoin(inData.SourceNode, inData.Study)
 				if ok {
 			  		outBuf = Logger.PrepareSend("Replying", 1)
 				} else {
@@ -165,8 +219,8 @@ func runRouter(address string) {
 
 			// curate a new study
 			case "curator":
-				ok = startStudy(incomingData.Study.StudyId, 
-					incomingData.Study.NumFeatures)
+				ok = startStudy(inData.Study.StudyId, 
+					inData.Study.NumFeatures)
 				if ok {
 			  		outBuf = Logger.PrepareSend("Replying", 1)
 				} else {
@@ -174,7 +228,7 @@ func runRouter(address string) {
 				}				
 
 			case "beat":
-				fmt.Printf("Heartbeat from %s\n", incomingData.SourceNode)
+				fmt.Printf("Heartbeat from %s\n", inData.SourceNode)
 				outBuf = Logger.PrepareSend("Replying to heartbeat", 1)
 
 			default:
@@ -185,19 +239,24 @@ func runRouter(address string) {
 		}
 
 	  	conn.Write(outBuf)
-		fmt.Printf("Done processing data from %s\n", incomingData.SourceNode)
 
 	}
 
 }
 
-func testModel(study Study) (float64, float64) {
+func testModel(study Study, node string) (float64, float64) {
 
-	myWeights := study.Weights 
-	argArray := python.PyList_New(len(myWeights))
+	var weights []float64
+	if node == "global" {
+		weights = study.GlobalWeights 
+	} else {
+		weights = study.Clients[node].Weights
+	}
 
-	for i := 0; i < len(myWeights); i++ {
-		python.PyList_SetItem(argArray, i, python.PyFloat_FromDouble(myWeights[i]))
+	argArray := python.PyList_New(len(weights))
+
+	for i := 0; i < len(weights); i++ {
+		python.PyList_SetItem(argArray, i, python.PyFloat_FromDouble(weights[i]))
 	}
 
 	test_result := testFunc.CallFunction(argArray)
@@ -220,11 +279,9 @@ func startStudy(studyId string, numFeatures int) bool {
 	// Add study to map and set random weights
 	var newStudy Study
 
-	newStudy.Participants = make(map[string]string)
-	newStudy.Weights = make([]float64, numFeatures)
-	for i := 0; i < numFeatures; i++ {
-		newStudy.Weights[i] = rand.Float64()
-	}
+	newStudy.Clients = make(map[string]ClientState)
+	newStudy.NumFeatures = numFeatures
+	newStudy.GlobalWeights = newRandomModel(numFeatures)
 
 	myStudies[studyId] = newStudy
 	fmt.Printf("Added a new study: %s\n", studyId)
@@ -241,14 +298,19 @@ func processJoin(node string, study StudyInfo) bool {
 		return false
 	}
 
-	_, exists = theStudy.Participants[node]
+	if study.NumFeatures != theStudy.NumFeatures {
+		fmt.Printf("Rejected an incorrect numFeatures for study: %s\n", study.StudyId)
+		return false
+	}
+
+	_, exists = theStudy.Clients[node]
 	if exists {
 		fmt.Printf("Node %s is already joined in study: %s \n", node, study.StudyId)
 		return false
 	}
 
 	// Add node
-	theStudy.Participants[node] = "in" 
+	theStudy.Clients[node] = ClientState{0, false, newRandomModel(study.NumFeatures)}
 	fmt.Printf("Joined %s in study %s \n", node, study.StudyId)
 
 	return true
@@ -259,24 +321,57 @@ func gradientUpdate(nodeId string, studyId string, deltas []float64) bool {
 	_, exists := myStudies[studyId]
 	if exists {
 
-		_, exists = myStudies[studyId].Participants[nodeId]
+		_, exists = myStudies[studyId].Clients[nodeId]
 		
 		// Add in the deltas
 		if exists { 
 
 			theStudy := myStudies[studyId]
+			isLocal := theStudy.Clients[nodeId].IsComputingLocal
 
-			for j := 0; j < len(deltas); j++ {
-				theStudy.Weights[j] += deltas[j]
+			if isLocal {
+				
+				// Just update the local copy of the model
+				clientState := myStudies[studyId].Clients[nodeId]
+				for j := 0; j < len(deltas); j++ {
+					clientState.Weights[j] += deltas[j]
+				}
+
+				clientState.NumIterations = clientState.NumIterations + 1
+				theStudy.Clients[nodeId] = clientState
+				myStudies[studyId] = theStudy
+				fmt.Printf("Local grad update from %s on %s \n", nodeId, studyId)
+
+			} else {
+
+				// Update the global model
+				for j := 0; j < len(deltas); j++ {
+					theStudy.GlobalWeights[j] += deltas[j]
+				}
+				myStudies[studyId] = theStudy
+				fmt.Printf("Grad update from %s on %s \n", nodeId, studyId)
+							
 			}
-
-			myStudies[studyId] = theStudy
 		}
 	}
 
-	fmt.Printf("Grad update from %s on %s %t \n", nodeId, studyId, exists)
 	return exists
 
+}
+
+func fetchLocalModel(nodeName string) {
+
+}
+
+// Helper function to generate a random array of length numFeatures
+func newRandomModel(numFeatures int) []float64 {
+
+	study := make([]float64, numFeatures)
+	for i := 0; i < numFeatures; i++ {
+		study[i] = rand.Float64()
+	}
+
+	return study
 }
 
 // Error checking function

@@ -152,6 +152,10 @@ func parseArgs() {
 	studyName = inputargs[1]
 	datasetName = inputargs[2]
 
+	fmt.Printf("Name: %s\n", name)
+	fmt.Printf("Study: %s\n", studyName)
+	fmt.Printf("Dataset: %s\n", datasetName)
+
 	if len(inputargs) > 3 {
 		fmt.Println("Running locally.")
 		isLocal = true
@@ -296,8 +300,8 @@ func oneGradientStep(globalW []float64) ([]float64, error) {
 		python.PyList_SetItem(argArray, i, python.PyFloat_FromDouble(globalW[i]))
 	}
 
-	result := logPrivFunc.CallFunction(python.PyInt_FromLong(1), argArray, 
-		python.PyInt_FromLong(10))
+	// Either use full GD or SGD here
+	result := logPrivFunc.CallFunction(python.PyInt_FromLong(1), argArray)
 	
 	// Convert the resulting array to a go byte array
 	pyByteArray := python.PyByteArray_FromObject(result)
