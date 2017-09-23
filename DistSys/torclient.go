@@ -88,7 +88,7 @@ func main() {
   	
   	sendGradMessage(logger, torDialer, pulledGradient, true)
 
-  	for i := 0; i < 20000; i++ { 
+  	for i := 0; i < 100000; i++ { 
     	sendGradMessage(logger, torDialer, pulledGradient, false)
   	}
 
@@ -241,9 +241,7 @@ func sendGradMessage(logger *govec.GoLog,
 		completed = true
 
 	}
-
 	return 1
-
 }
 
 func getServerConnection(torDialer proxy.Dialer) (net.Conn, error) {
@@ -301,7 +299,8 @@ func oneGradientStep(globalW []float64) ([]float64, error) {
 	}
 
 	// Either use full GD or SGD here
-	result := logPrivFunc.CallFunction(python.PyInt_FromLong(1), argArray)
+	result := logPrivFunc.CallFunction(python.PyInt_FromLong(1), argArray,
+		python.PyInt_FromLong(10))
 	
 	// Convert the resulting array to a go byte array
 	pyByteArray := python.PyByteArray_FromObject(result)

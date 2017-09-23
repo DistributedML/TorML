@@ -345,6 +345,7 @@ func gradientUpdate(nodeId string, studyId string, deltas []float64) bool {
 				for j := 0; j < len(deltas); j++ {
 					theStudy.GlobalWeights[j] += deltas[j]
 				}
+				
 				myStudies[studyId] = theStudy
 				fmt.Printf("Grad update from %s on %s \n", nodeId, studyId)
 							
