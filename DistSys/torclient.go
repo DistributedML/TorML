@@ -88,7 +88,7 @@ func main() {
   	
   	sendGradMessage(logger, torDialer, pulledGradient, true)
 
-  	for i := 0; i < 100000; i++ { 
+  	for i := 0; i < 20000; i++ { 
     	sendGradMessage(logger, torDialer, pulledGradient, false)
   	}
 
