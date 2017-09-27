@@ -15,12 +15,12 @@ import (
 type MessageData struct {
 	Type 		  string
 	SourceNode    string
-	Study         StudyInfo
+	Model         ModelInfo
 	Deltas 		  []float64
 }
 
-type StudyInfo struct {
-	StudyId	 	string
+type ModelInfo struct {
+	ModelId	 	string
 	NumFeatures int
 }
 
@@ -30,8 +30,8 @@ type ClientState struct {
 	Weights 			[]float64
 }
 
-// An active study: list of participants and weights
-type Study struct {
+// An active model: list of participants and weights
+type Model struct {
 	// use a map to store each local server's local updates
 	NumFeatures 	int
 	Clients 	 	map[string]ClientState
@@ -42,7 +42,7 @@ var (
 	maxnode     		int = 0
 	numFeatures			int = 0
 	registeredNodes		map[string]string
-	myStudies 			map[string]Study
+	myModels 			map[string]Model
 
 	// Test Module for python
 	testModule  *python.PyObject
@@ -59,18 +59,18 @@ func handler(w http.ResponseWriter, r *http.Request) {
     
     fmt.Fprintf(w, "Welcome %s!\n\n", r.URL.Path[1:])
 
-    study, exists := myStudies[req]
+    model, exists := myModels[req]
     
     if exists {
 
-    	train_error, test_error := testModel(study, "global")
+    	train_error, test_error := testModel(model, "global")
     	fmt.Fprintf(w, "Train Loss: %f\n", train_error)	
     	fmt.Fprintf(w, "Test Loss: %f\n", test_error)	
 
-    	for node, clientState := range study.Clients {
+    	for node, clientState := range model.Clients {
 
     		fmt.Fprintf(w, "\n");	
-    		train_error, test_error = testModel(study, node)
+    		train_error, test_error = testModel(model, node)
     		fmt.Fprintf(w, "%s iterations: %d\n", node, clientState.NumIterations)	
     		fmt.Fprintf(w, "%s train Loss: %f\n", node, train_error)	
     		fmt.Fprintf(w, "%s test Loss: %f\n", node, test_error)	
@@ -87,13 +87,13 @@ func handler(w http.ResponseWriter, r *http.Request) {
     	writer := csv.NewWriter(file)
     	defer writer.Flush()
 
-    	for _, study := range myStudies {
+    	for _, model := range myModels {
 
-    		st := strings.Fields(strings.Trim(fmt.Sprint(study.GlobalWeights), "[]"))
+    		st := strings.Fields(strings.Trim(fmt.Sprint(model.GlobalWeights), "[]"))
     		writer.Write(st)
 
-    		for _, studyState := range study.Clients {
-    			st := strings.Fields(strings.Trim(fmt.Sprint(studyState.Weights), "[]"))
+    		for _, modelState := range model.Clients {
+    			st := strings.Fields(strings.Trim(fmt.Sprint(modelState.Weights), "[]"))
     			writer.Write(st)
     		}
     	}
@@ -166,10 +166,7 @@ func runRouter(address string) {
 	buf := make([]byte, 2048)
 	outBuf := make([]byte, 2048)
 	registeredNodes = make(map[string]string)
-	myStudies = make(map[string]Study)
-
-	// TODO REMOVE
-	// fmt.Printf("Start sample study: %t\n", startStudy("study1", 101))
+	myModels = make(map[string]Model)
 
 	fmt.Printf("Listening for TCP....\n")
 
@@ -192,35 +189,35 @@ func runRouter(address string) {
 			case "grad":
 
 				ok = gradientUpdate(inData.SourceNode,
-					inData.Study.StudyId,
+					inData.Model.ModelId,
 					inData.Deltas)
 
-				clientState := myStudies[inData.Study.StudyId].Clients[inData.SourceNode]
+				clientState := myModels[inData.Model.ModelId].Clients[inData.SourceNode]
 
 				// generates a float from 0 to 1
 				if rand.Float64() > 0.8 {
 					outBuf = Logger.PrepareSend("Replying", clientState.Weights)
 					clientState.IsComputingLocal = true
 				} else {
-					outBuf = Logger.PrepareSend("Replying", myStudies[inData.Study.StudyId].GlobalWeights)
+					outBuf = Logger.PrepareSend("Replying", myModels[inData.Model.ModelId].GlobalWeights)
 					clientState.IsComputingLocal = false
 				}
 
-				myStudies[inData.Study.StudyId].Clients[inData.SourceNode] = clientState
+				myModels[inData.Model.ModelId].Clients[inData.SourceNode] = clientState
 			
 			// Add new nodes
 			case "join":
-				ok = processJoin(inData.SourceNode, inData.Study)
+				ok = processJoin(inData.SourceNode, inData.Model)
 				if ok {
 			  		outBuf = Logger.PrepareSend("Replying", 1)
 				} else {
 					outBuf = Logger.PrepareSend("Replying", 0)
 				}
 
-			// curate a new study
+			// curate a new model
 			case "curator":
-				ok = startStudy(inData.Study.StudyId, 
-					inData.Study.NumFeatures)
+				ok = startModel(inData.Model.ModelId, 
+					inData.Model.NumFeatures)
 				if ok {
 			  		outBuf = Logger.PrepareSend("Replying", 1)
 				} else {
@@ -241,13 +238,13 @@ func runRouter(address string) {
 	}
 }
 
-func testModel(study Study, node string) (float64, float64) {
+func testModel(model Model, node string) (float64, float64) {
 
 	var weights []float64
 	if node == "global" {
-		weights = study.GlobalWeights 
+		weights = model.GlobalWeights 
 	} else {
-		weights = study.Clients[node].Weights
+		weights = model.Clients[node].Weights
 	}
 
 	argArray := python.PyList_New(len(weights))
@@ -265,89 +262,89 @@ func testModel(study Study, node string) (float64, float64) {
 	return train_err, test_err
 }
 
-func startStudy(studyId string, numFeatures int) bool {
+func startModel(ModelId string, numFeatures int) bool {
 
-	_, exists := myStudies[studyId]
+	_, exists := myModels[ModelId]
 	if exists {
-		fmt.Printf("Study %s already exists: \n", studyId)
+		fmt.Printf("Model %s already exists: \n", ModelId)
 		return false
 	}
 
-	// Add study to map and set random weights
-	var newStudy Study
+	// Add model to map and set random weights
+	var newModel Model
 
-	newStudy.Clients = make(map[string]ClientState)
-	newStudy.NumFeatures = numFeatures
-	newStudy.GlobalWeights = newRandomModel(numFeatures)
+	newModel.Clients = make(map[string]ClientState)
+	newModel.NumFeatures = numFeatures
+	newModel.GlobalWeights = newRandomModel(numFeatures)
 
-	myStudies[studyId] = newStudy
-	fmt.Printf("Added a new study: %s\n", studyId)
+	myModels[ModelId] = newModel
+	fmt.Printf("Added a new model: %s\n", ModelId)
 
 	return true
 }
 
-func processJoin(node string, study StudyInfo) bool {
+func processJoin(node string, model ModelInfo) bool {
 
-	// check if study exists
-	theStudy, exists := myStudies[study.StudyId]
+	// check if model exists
+	theModel, exists := myModels[model.ModelId]
 	if !exists {
-		fmt.Printf("Rejected a fake join for study: %s\n", study.StudyId)
+		fmt.Printf("Rejected a fake join for model: %s\n", model.ModelId)
 		return false
 	}
 
-	if study.NumFeatures != theStudy.NumFeatures {
-		fmt.Printf("Rejected an incorrect numFeatures for study: %s\n", study.StudyId)
+	if model.NumFeatures != theModel.NumFeatures {
+		fmt.Printf("Rejected an incorrect numFeatures for model: %s\n", model.ModelId)
 		return false
 	}
 
-	_, exists = theStudy.Clients[node]
+	_, exists = theModel.Clients[node]
 	if exists {
-		fmt.Printf("Node %s is already joined in study: %s \n", node, study.StudyId)
+		fmt.Printf("Node %s is already joined in model: %s \n", node, model.ModelId)
 		return false
 	}
 
 	// Add node
-	theStudy.Clients[node] = ClientState{0, false, newRandomModel(study.NumFeatures)}
-	fmt.Printf("Joined %s in study %s \n", node, study.StudyId)
+	theModel.Clients[node] = ClientState{0, false, newRandomModel(model.NumFeatures)}
+	fmt.Printf("Joined %s in model %s \n", node, model.ModelId)
 
 	return true
 }
 
-func gradientUpdate(nodeId string, studyId string, deltas []float64) bool {
+func gradientUpdate(nodeId string, ModelId string, deltas []float64) bool {
 
-	_, exists := myStudies[studyId]
+	_, exists := myModels[ModelId]
 	if exists {
 
-		_, exists = myStudies[studyId].Clients[nodeId]
+		_, exists = myModels[ModelId].Clients[nodeId]
 		
 		// Add in the deltas
 		if exists { 
 
-			theStudy := myStudies[studyId]
-			isLocal := theStudy.Clients[nodeId].IsComputingLocal
+			theModel := myModels[ModelId]
+			isLocal := theModel.Clients[nodeId].IsComputingLocal
 
 			if isLocal {
 				
 				// Just update the local copy of the model
-				clientState := myStudies[studyId].Clients[nodeId]
+				clientState := myModels[ModelId].Clients[nodeId]
 				for j := 0; j < len(deltas); j++ {
 					clientState.Weights[j] += deltas[j]
 				}
 
 				clientState.NumIterations = clientState.NumIterations + 1
-				theStudy.Clients[nodeId] = clientState
-				myStudies[studyId] = theStudy
-				fmt.Printf("Local grad update from %s on %s \n", nodeId, studyId)
+				theModel.Clients[nodeId] = clientState
+				myModels[ModelId] = theModel
+				fmt.Printf("Local grad update from %s on %s \n", nodeId, ModelId)
 
 			} else {
 
 				// Update the global model
 				for j := 0; j < len(deltas); j++ {
-					theStudy.GlobalWeights[j] += deltas[j]
+					theModel.GlobalWeights[j] += deltas[j]
 				}
 				
-				myStudies[studyId] = theStudy
-				fmt.Printf("Grad update from %s on %s \n", nodeId, studyId)
+				myModels[ModelId] = theModel
+				fmt.Printf("Grad update from %s on %s \n", nodeId, ModelId)
 							
 			}
 		}
@@ -359,12 +356,12 @@ func gradientUpdate(nodeId string, studyId string, deltas []float64) bool {
 // Helper function to generate a random array of length numFeatures
 func newRandomModel(numFeatures int) []float64 {
 
-	study := make([]float64, numFeatures)
+	model := make([]float64, numFeatures)
 	for i := 0; i < numFeatures; i++ {
-		study[i] = rand.Float64()
+		model[i] = rand.Float64()
 	}
 
-	return study
+	return model
 }
 
 // Error checking function

@@ -15,19 +15,19 @@ var TOR_PROXY string = "127.0.0.1:9150"
 
 var (
   name string
-  studyName string
+  modelName string
   isLocal bool
 )
 
 type MessageData struct {
-  Type      string
+  Type          string
   SourceNode    string
-  Study         StudyInfo
-  Deltas      []float64
+  Model         ModelInfo
+  Deltas        []float64
 }
 
-type StudyInfo struct {
-  StudyId   string
+type ModelInfo struct {
+  ModelId   string
   NumFeatures int
 }
 
@@ -45,12 +45,12 @@ func parseArgs() {
   flag.Parse()
   inputargs := flag.Args()
   if len(inputargs) < 2 {
-    fmt.Println("USAGE: go run torcurator.go curatorName studyName")
+    fmt.Println("USAGE: go run torcurator.go curatorName modelName")
     os.Exit(1)
   }
 
   name = inputargs[0]
-  studyName = inputargs[1]
+  modelName = inputargs[1]
 
   if len(inputargs) > 2 {
     fmt.Println("Running locally.")
@@ -81,15 +81,15 @@ func sendCurateMessage(logger *govec.GoLog, torDialer proxy.Dialer) int {
 
   fmt.Println("TOR Dial Success!")
 
-  var study StudyInfo
-  study.StudyId = studyName
-  study.NumFeatures = 101
+  var model ModelInfo
+  model.ModelId = modelName
+  model.NumFeatures = 101
 
   var msg MessageData
   msg.Type = "curator"
   msg.SourceNode = name
-  msg.Study = study
-  msg.Deltas = make([]float64, study.NumFeatures)
+  msg.Model = model
+  msg.Deltas = make([]float64, model.NumFeatures)
 
   outBuf := logger.PrepareSend("Sending packet to torserver", msg)
       

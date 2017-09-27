@@ -23,21 +23,21 @@ var TOR_PROXY string = "127.0.0.1:9150"
 type MessageData struct {
 	Type 		  string
 	SourceNode    string
-	Study         StudyInfo
+	Model         ModelInfo
 	Deltas 		  []float64
 }
 
-type StudyInfo struct {
-	StudyId	 	string
+type ModelInfo struct {
+	ModelId	 	string
 	NumFeatures int
 }
 
 var (
 	name 			string
-	studyName  		string
+	modelName  		string
 	datasetName 	string
 	isLocal 		bool
-	study 			StudyInfo
+	model 			ModelInfo
 	logModule      	*python.PyObject
 	logInitFunc     *python.PyObject
 	logPrivFunc     *python.PyObject
@@ -63,9 +63,9 @@ func pyInit(datasetName string) {
 	logPrivFunc = logModule.GetAttrString("privateFun")
 	numFeatures = logInitFunc.CallFunction(python.PyString_FromString(datasetName))
 
-  	study.StudyId = studyName
-  	study.NumFeatures = python.PyInt_AsLong(numFeatures)
-  	pulledGradient = make([]float64, study.NumFeatures)
+  	model.ModelId = modelName
+  	model.NumFeatures = python.PyInt_AsLong(numFeatures)
+  	pulledGradient = make([]float64, model.NumFeatures)
 
 }
 
@@ -78,7 +78,7 @@ func main() {
 	// Initialize the python side
 	pyInit(datasetName)
 
-	fmt.Printf("Joining study %s \n", studyName)
+	fmt.Printf("Joining model %s \n", modelName)
   	joined := sendJoinMessage(logger, torDialer)
 
   	if joined == 0 {
@@ -149,11 +149,11 @@ func parseArgs() {
 		os.Exit(1)
 	}
 	name = inputargs[0]
-	studyName = inputargs[1]
+	modelName = inputargs[1]
 	datasetName = inputargs[2]
 
 	fmt.Printf("Name: %s\n", name)
-	fmt.Printf("Study: %s\n", studyName)
+	fmt.Printf("Study: %s\n", modelName)
 	fmt.Printf("Dataset: %s\n", datasetName)
 
 	if len(inputargs) > 3 {
@@ -199,7 +199,7 @@ func sendGradMessage(logger *govec.GoLog,
 		if !bootstrapping {
 			msg.Type = "grad"
 			msg.SourceNode = name
-			msg.Study = study
+			msg.Model = model
 			msg.Deltas, err = oneGradientStep(globalW)
 
 			if err != nil {
@@ -210,8 +210,8 @@ func sendGradMessage(logger *govec.GoLog,
 		} else {
 			msg.Type = "grad"
 			msg.SourceNode = name
-			msg.Study = study
-			msg.Deltas = make([]float64, study.NumFeatures)
+			msg.Model = model
+			msg.Deltas = make([]float64, model.NumFeatures)
 			bootstrapping = false
 		}
 
@@ -269,8 +269,8 @@ func sendJoinMessage(logger *govec.GoLog, torDialer proxy.Dialer) int {
 	var msg MessageData
     msg.Type = "join"
     msg.SourceNode = name
-    msg.Study = study
-    msg.Deltas = make([]float64, study.NumFeatures)
+    msg.Model = model
+    msg.Deltas = make([]float64, model.NumFeatures)
 
     outBuf := logger.PrepareSend("Sending packet to torserver", msg)
     	
