@@ -56,6 +56,8 @@ var (
 	myModels 			map[string]Model
 	myValidators	 	map[string]Validator
 
+	MULTICAST_RATE		float64 = 0.97
+
 	// Test Module for python
 	testModule  *python.PyObject
 	testFunc    *python.PyObject
@@ -208,7 +210,7 @@ func runRouter(address string) {
 					outBuf = Logger.PrepareSend("Replying", make([]float64, 0))
 				} else {
 
-					if rand.Float64() > 0.9 {
+					if rand.Float64() > MULTICAST_RATE {
 						fmt.Println("Doing a validation multicast")
 						startValidation(modelId)
 					}
@@ -361,15 +363,15 @@ func gradientUpdate(nodeId string, modelId string, deltas []float64) bool {
 
 				validator.ClientResponses[nodeId] = validatorWeights
 				validator.NumResponses++
+				myValidators[modelId] = validator
+				fmt.Printf("Validation update from %s on %s \n", nodeId, modelId)
 
 				if validator.NumResponses >= len(validator.ClientResponses) {
 					fmt.Println("READY FOR VALIDATION MAGIC")
 					runValidation(modelId)
 				}
 
-				myValidators[modelId] = validator
-				fmt.Printf("Validation update from %s on %s \n", nodeId, modelId)
-
+				// Revert the client state
 				clientState.IsComputingLocal = false
 				theModel.Clients[nodeId] = clientState
 				myModels[modelId] = theModel
@@ -413,8 +415,8 @@ func runValidation(modelId string) {
 // Starts the validation multicast.
 func startValidation(modelId string) {
 
-	_, exists := myModels[modelId]
-	if exists {
+	_, exists := myValidators[modelId]
+	if !exists {
 
 		// Create new validator object
 		var valid Validator
@@ -431,6 +433,11 @@ func startValidation(modelId string) {
 			myModels[modelId].Clients[node] = state
 			valid.ClientResponses[node] = make([]float64, myModels[modelId].NumFeatures)
 		}
+
+		fmt.Println("Setup Validation multicast")	
+
+	} else {
+		fmt.Println("Validation already in progress")
 	}
 }
 
