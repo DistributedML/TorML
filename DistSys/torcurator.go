@@ -27,8 +27,9 @@ type MessageData struct {
 }
 
 type ModelInfo struct {
-  ModelId   string
-  NumFeatures int
+  ModelId       string
+  NumFeatures   int
+  MinClients    int
 }
 
 func main() {
@@ -84,6 +85,7 @@ func sendCurateMessage(logger *govec.GoLog, torDialer proxy.Dialer) int {
   var model ModelInfo
   model.ModelId = modelName
   model.NumFeatures = 101
+  model.MinClients = 5
 
   var msg MessageData
   msg.Type = "curator"

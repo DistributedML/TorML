@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"strconv"
 	"github.com/DistributedClocks/GoVector/govec"
 	"github.com/sbinet/go-python"
 )
@@ -20,8 +21,9 @@ type MessageData struct {
 }
 
 type ModelInfo struct {
-	ModelId	 	string
-	NumFeatures int
+	ModelId	 		string
+	NumFeatures 	int
+	MinClients    	int
 }
 
 type ClientState struct {
@@ -33,16 +35,26 @@ type ClientState struct {
 // An active model: list of participants and weights
 type Model struct {
 	// use a map to store each local server's local updates
-	NumFeatures 	int
-	Clients 	 	map[string]ClientState
-	GlobalWeights 	[]float64
+	NumFeatures 		int
+	Clients 	 		map[string]ClientState
+	GlobalWeights 		[]float64
+	MinClients 			int
+}
+
+type Validator struct {
+	IsValidating		bool
+	NumResponses		int
+	ClientResponses 	map[string][]float64
+	ValidationModel		[]float64
 }
 
 var (
 	maxnode     		int = 0
 	numFeatures			int = 0
+	numValidations		int = 0
 	registeredNodes		map[string]string
 	myModels 			map[string]Model
+	myValidators	 	map[string]Validator
 
 	// Test Module for python
 	testModule  *python.PyObject
@@ -68,13 +80,13 @@ func handler(w http.ResponseWriter, r *http.Request) {
     	fmt.Fprintf(w, "Test Loss: %f\n", test_error)	
 
     	for node, clientState := range model.Clients {
-
+    	
     		fmt.Fprintf(w, "\n");	
     		train_error, test_error = testModel(model, node)
     		fmt.Fprintf(w, "%s iterations: %d\n", node, clientState.NumIterations)	
     		fmt.Fprintf(w, "%s train Loss: %f\n", node, train_error)	
     		fmt.Fprintf(w, "%s test Loss: %f\n", node, test_error)	
-
+    	
     	}
     }
 
@@ -95,13 +107,14 @@ func handler(w http.ResponseWriter, r *http.Request) {
     		for _, modelState := range model.Clients {
     			st := strings.Fields(strings.Trim(fmt.Sprint(modelState.Weights), "[]"))
     			writer.Write(st)
-    		}
+    		}       
     	}
 
     	fmt.Fprintf(w, "Model flushed.")
 
     }
 }
+
 
 func httpHandler() {
 	http.HandleFunc("/", handler)
@@ -167,6 +180,7 @@ func runRouter(address string) {
 	outBuf := make([]byte, 2048)
 	registeredNodes = make(map[string]string)
 	myModels = make(map[string]Model)
+	myValidators = make(map[string]Validator)
 
 	fmt.Printf("Listening for TCP....\n")
 
@@ -188,23 +202,33 @@ func runRouter(address string) {
 			// Client is sending a gradient update. Apply it and return myWeights
 			case "grad":
 
-				ok = gradientUpdate(inData.SourceNode,
-					inData.Model.ModelId,
-					inData.Deltas)
+				modelId := inData.Model.ModelId
 
-				clientState := myModels[inData.Model.ModelId].Clients[inData.SourceNode]
-
-				// generates a float from 0 to 1
-				if rand.Float64() > 0.8 {
-					outBuf = Logger.PrepareSend("Replying", clientState.Weights)
-					clientState.IsComputingLocal = true
+				if len(myModels[modelId].Clients) < myModels[modelId].MinClients {
+					outBuf = Logger.PrepareSend("Replying", make([]float64, 0))
 				} else {
-					outBuf = Logger.PrepareSend("Replying", myModels[inData.Model.ModelId].GlobalWeights)
-					clientState.IsComputingLocal = false
+
+					if rand.Float64() > 0.9 {
+						fmt.Println("Doing a validation multicast")
+						startValidation(modelId)
+					}
+
+					ok = gradientUpdate(inData.SourceNode, modelId, inData.Deltas)
+
+					clientState := myModels[modelId].Clients[inData.SourceNode]
+
+					// generates a float from 0 to 1
+					if isClientValidating(modelId, inData.SourceNode) {
+						outBuf = Logger.PrepareSend("Replying", clientState.Weights)
+						clientState.IsComputingLocal = true
+					} else {
+						outBuf = Logger.PrepareSend("Replying", myModels[inData.Model.ModelId].GlobalWeights)
+						clientState.IsComputingLocal = false
+					}
+
+					myModels[inData.Model.ModelId].Clients[inData.SourceNode] = clientState
 				}
 
-				myModels[inData.Model.ModelId].Clients[inData.SourceNode] = clientState
-			
 			// Add new nodes
 			case "join":
 				ok = processJoin(inData.SourceNode, inData.Model)
@@ -217,7 +241,8 @@ func runRouter(address string) {
 			// curate a new model
 			case "curator":
 				ok = startModel(inData.Model.ModelId, 
-					inData.Model.NumFeatures)
+					inData.Model.NumFeatures,
+					inData.Model.MinClients)
 				if ok {
 			  		outBuf = Logger.PrepareSend("Replying", 1)
 				} else {
@@ -262,11 +287,11 @@ func testModel(model Model, node string) (float64, float64) {
 	return train_err, test_err
 }
 
-func startModel(ModelId string, numFeatures int) bool {
+func startModel(modelId string, numFeatures int, minClients int) bool {
 
-	_, exists := myModels[ModelId]
+	_, exists := myModels[modelId]
 	if exists {
-		fmt.Printf("Model %s already exists: \n", ModelId)
+		fmt.Printf("Model %s already exists: \n", modelId)
 		return false
 	}
 
@@ -276,9 +301,10 @@ func startModel(ModelId string, numFeatures int) bool {
 	newModel.Clients = make(map[string]ClientState)
 	newModel.NumFeatures = numFeatures
 	newModel.GlobalWeights = newRandomModel(numFeatures)
-
-	myModels[ModelId] = newModel
-	fmt.Printf("Added a new model: %s\n", ModelId)
+	newModel.MinClients = minClients
+	
+	myModels[modelId] = newModel
+	fmt.Printf("Added a new model: %s\n", modelId)
 
 	return true
 }
@@ -310,31 +336,43 @@ func processJoin(node string, model ModelInfo) bool {
 	return true
 }
 
-func gradientUpdate(nodeId string, ModelId string, deltas []float64) bool {
+func gradientUpdate(nodeId string, modelId string, deltas []float64) bool {
 
-	_, exists := myModels[ModelId]
+	_, exists := myModels[modelId]
 	if exists {
 
-		_, exists = myModels[ModelId].Clients[nodeId]
+		_, exists = myModels[modelId].Clients[nodeId]
 		
 		// Add in the deltas
 		if exists { 
 
-			theModel := myModels[ModelId]
-			isLocal := theModel.Clients[nodeId].IsComputingLocal
+			theModel := myModels[modelId]
+			clientState := theModel.Clients[nodeId]
 
-			if isLocal {
+			if clientState.IsComputingLocal {
 				
 				// Just update the local copy of the model
-				clientState := myModels[ModelId].Clients[nodeId]
+				validator := myValidators[modelId]
+				validatorWeights := validator.ClientResponses[nodeId]
+
 				for j := 0; j < len(deltas); j++ {
-					clientState.Weights[j] += deltas[j]
+					validatorWeights[j] = deltas[j]
 				}
 
-				clientState.NumIterations = clientState.NumIterations + 1
+				validator.ClientResponses[nodeId] = validatorWeights
+				validator.NumResponses++
+
+				if validator.NumResponses >= len(validator.ClientResponses) {
+					fmt.Println("READY FOR VALIDATION MAGIC")
+					runValidation(modelId)
+				}
+
+				myValidators[modelId] = validator
+				fmt.Printf("Validation update from %s on %s \n", nodeId, modelId)
+
+				clientState.IsComputingLocal = false
 				theModel.Clients[nodeId] = clientState
-				myModels[ModelId] = theModel
-				fmt.Printf("Local grad update from %s on %s \n", nodeId, ModelId)
+				myModels[modelId] = theModel
 
 			} else {
 
@@ -343,14 +381,68 @@ func gradientUpdate(nodeId string, ModelId string, deltas []float64) bool {
 					theModel.GlobalWeights[j] += deltas[j]
 				}
 				
-				myModels[ModelId] = theModel
-				fmt.Printf("Grad update from %s on %s \n", nodeId, ModelId)
+				myModels[modelId] = theModel
+				fmt.Printf("Grad update from %s on %s \n", nodeId, modelId)
 							
 			}
 		}
 	}
 
 	return exists
+}
+
+func runValidation(modelId string) {
+
+    file, err := os.Create("validation_" + strconv.Itoa(numValidations) +  ".csv")
+	checkError(err)
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	for _, model := range myValidators[modelId].ClientResponses {
+		st := strings.Fields(strings.Trim(fmt.Sprint(model), "[]"))
+		writer.Write(st)		       
+	}
+
+	delete(myValidators, modelId) 
+	numValidations++
+
+}
+
+// Starts the validation multicast.
+func startValidation(modelId string) {
+
+	_, exists := myModels[modelId]
+	if exists {
+
+		// Create new validator object
+		var valid Validator
+		valid.IsValidating = true
+		valid.NumResponses = 0
+		valid.ClientResponses = make(map[string][]float64)
+		valid.ValidationModel = myModels[modelId].GlobalWeights
+
+		// Add to global state
+		myValidators[modelId] = valid
+
+		for node, state := range myModels[modelId].Clients {
+			state.IsComputingLocal = true
+			myModels[modelId].Clients[node] = state
+			valid.ClientResponses[node] = make([]float64, myModels[modelId].NumFeatures)
+		}
+	}
+}
+
+func isClientValidating(modelId string, node string) bool {
+	
+	_, exists := myValidators[modelId]
+	
+	// Short circuit?
+	return exists && 
+		myValidators[modelId].IsValidating &&
+		myModels[modelId].Clients[node].IsComputingLocal
+
 }
 
 // Helper function to generate a random array of length numFeatures

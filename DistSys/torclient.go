@@ -28,8 +28,9 @@ type MessageData struct {
 }
 
 type ModelInfo struct {
-	ModelId	 	string
-	NumFeatures int
+	ModelId	 		string
+	NumFeatures 	int
+	MinClients		int
 }
 
 var (
@@ -65,6 +66,7 @@ func pyInit(datasetName string) {
 
   	model.ModelId = modelName
   	model.NumFeatures = python.PyInt_AsLong(numFeatures)
+  	model.MinClients = 5
   	pulledGradient = make([]float64, model.NumFeatures)
 
 }
@@ -238,7 +240,11 @@ func sendGradMessage(logger *govec.GoLog,
 		conn.Close()
 
 		pulledGradient = incomingMsg
-		completed = true
+		if (len(incomingMsg) > 0) {
+			completed = true
+		} else {
+			time.Sleep(1 * time.Second)
+		}
 
 	}
 	return 1
