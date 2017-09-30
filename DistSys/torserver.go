@@ -3,14 +3,15 @@ package main
 import (
 	"encoding/csv"
 	"fmt"
+	"math"
 	"math/rand"
 	"net"
 	"net/http"
 	"os"
 	"strings"
-	"strconv"
 	"github.com/DistributedClocks/GoVector/govec"
 	"github.com/sbinet/go-python"
+	"github.com/gonum/matrix/mat64"
 )
 
 type MessageData struct {
@@ -106,8 +107,9 @@ func handler(w http.ResponseWriter, r *http.Request) {
     		st := strings.Fields(strings.Trim(fmt.Sprint(model.GlobalWeights), "[]"))
     		writer.Write(st)
 
-    		for _, modelState := range model.Clients {
+    		for node, modelState := range model.Clients {
     			st := strings.Fields(strings.Trim(fmt.Sprint(modelState.Weights), "[]"))
+    			st = append(st, node)
     			writer.Write(st)
     		}       
     	}
@@ -352,17 +354,19 @@ func gradientUpdate(nodeId string, modelId string, deltas []float64) bool {
 			clientState := theModel.Clients[nodeId]
 
 			if clientState.IsComputingLocal {
-				
+
 				// Just update the local copy of the model
 				validator := myValidators[modelId]
 				validatorWeights := validator.ClientResponses[nodeId]
 
 				for j := 0; j < len(deltas); j++ {
 					validatorWeights[j] = deltas[j]
+					clientState.Weights[j] += deltas[j]
 				}
 
 				validator.ClientResponses[nodeId] = validatorWeights
 				validator.NumResponses++
+				clientState.NumIterations++
 				myValidators[modelId] = validator
 				fmt.Printf("Validation update from %s on %s \n", nodeId, modelId)
 
@@ -395,16 +399,26 @@ func gradientUpdate(nodeId string, modelId string, deltas []float64) bool {
 
 func runValidation(modelId string) {
 
-    file, err := os.Create("validation_" + strconv.Itoa(numValidations) +  ".csv")
-	checkError(err)
-	defer file.Close()
+	scores := make(map[string]*mat64.Dense)
+	for node, model := range myValidators[modelId].ClientResponses {
+		scores[node] = mat64.NewDense(myModels[modelId].NumFeatures, 1, model)
+	}
 
-	writer := csv.NewWriter(file)
-	defer writer.Flush()
+	for node1, vector1 := range scores {
+		
+		var rollingSum float64
+		for _, vector2 := range scores {
+			rollingSum += FindEucDistance(vector1, vector2)
+		}
 
-	for _, model := range myValidators[modelId].ClientResponses {
-		st := strings.Fields(strings.Trim(fmt.Sprint(model), "[]"))
-		writer.Write(st)		       
+		// Ignore distance to itself, which is always 0.
+		rollingSum /= float64(len(scores) - 1) 
+
+		// Normalize for number of features
+		rollingSum /= float64(myModels[modelId].NumFeatures)
+
+		fmt.Printf("Average Distance for %s: %.6f \n", node1, rollingSum)
+
 	}
 
 	delete(myValidators, modelId) 
@@ -461,6 +475,19 @@ func newRandomModel(numFeatures int) []float64 {
 	}
 
 	return model
+}
+
+
+func FindEucDistance(vectorX *mat64.Dense, vectorY *mat64.Dense) float64 {
+	
+	// Finds X-Y
+	distanceVec := mat64.NewDense(0, 0, nil)
+	distanceVec.Sub(vectorX, vectorY)
+
+	result := mat64.NewDense(0, 0, nil)
+	result.MulElem(distanceVec, distanceVec)
+
+	return math.Sqrt(mat64.Sum(result))
 }
 
 // Error checking function
