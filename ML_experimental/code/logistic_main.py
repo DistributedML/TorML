@@ -5,11 +5,22 @@ import global_model
 import pdb
 from sklearn.linear_model import SGDClassifier
 from sklearn.svm import LinearSVC
+import numpy as np
 
 # Load Binary and Multi -class data
 data = utils.load_dataset("logisticData")
 XBin, yBin = data['X'], data['y']
 XBinValid, yBinValid = data['Xvalid'], data['yvalid']
+
+#Shuffle data
+
+(n,d) = XBin.shape
+#all_data = np.hstack((XBin, yBin))
+#np.random.shuffle(all_data)
+#all_data_valid = np.hstack((XBinValid, yBinValid))
+
+#XBin,yBin = np.hsplit(all_data,d)
+#XBinValid, yBinValid = np.hsplit(all_data_valid,d)
 
 cut1 = int(XBin.shape[0] * 0.2)
 cut2 = int(XBin.shape[0] * 0.4)
@@ -94,6 +105,24 @@ if __name__ == "__main__":
           utils.classification_error(global_model_sgd.predict(XBin), yBin))
     print("global 1 SGD Validation error %.3f" %
           utils.classification_error(global_model_sgd.predict(XBinValid), yBinValid))
+          
+    # GLOBAL MODEL with private SGD
+    global_model_sgd = global_model.globalModel(logistic=True, verbose=0, maxEvals=100000)
+    global_model_sgd.add_model(model1)
+    global_model_sgd.add_model(model2)
+    global_model_sgd.add_model(model3)
+    global_model_sgd.add_model(model4)
+    global_model_sgd.add_model(model5)
+    training_batch_size = 5
+    print("STOCHASTIC BS is %.0f" % training_batch_size)
+          
+    global_model_sgd.sgd_fit_private(alpha=1, eta=1, batch_size=training_batch_size)
+    print("global 1 SGD Training error %.3f" %
+          utils.classification_error(global_model_sgd.predict(XBin), yBin))
+    print("global 1 SGD Validation error %.3f" %
+          utils.classification_error(global_model_sgd.predict(XBinValid), yBinValid))
+
+    
 
     # GLOBAL MODEL with PEGASOS
     global_model_pegasos = global_model.globalModelSVM(
@@ -109,6 +138,9 @@ if __name__ == "__main__":
           utils.classification_error(global_model_pegasos.predict(XBin), yBin))
     print("global SVM Validation error %.3f" %
           utils.classification_error(global_model_pegasos.predict(XBinValid), yBinValid))
+
+
+
 
     # FULL
     sk_full = logistic_model.logRegL2(XBin, yBin,

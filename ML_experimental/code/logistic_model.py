@@ -1,10 +1,16 @@
 from __future__ import division
 import numpy as np
+import minimizers
+import utils
+from numpy.linalg import norm
+import emcee
+#import matplotlib.pyplot as pl
+import random
 import math
 import minimizers
 import utils
 import pdb
-from numpy.linalg import norm
+
 
 
 class logReg:
@@ -66,6 +72,30 @@ class logReg:
         f_new, g_new = self.funObj(w_new, self.X[idx, :], self.y[idx])
 
         return (delta, f_new, g_new)
+    
+    
+    def privateFun2(self, eta, alpha, ww,  Z, Xbatch, ybatch, batch_size=0): 
+    
+        nn, dd = self.X.shape
+
+        if batch_size > 0 and batch_size < nn:
+            f, g = self.funObj(ww, Xbatch, ybatch, True, batch_size, nn)
+        else:
+            # Just take the full range
+            f, g = self.funObj(ww, self.X, self.y,True)
+    
+    
+        # step magnitude as implemented in Song, Chaudhuri and Sarwate (2013)
+        delta = (-1)*eta*(g+(1/batch_size)*Z)
+        w_new = ww + delta
+        
+        if batch_size > 0 and batch_size < nn:
+            f_new, g_new = self.funObj(w_new, Xbatch, ybatch, True, batch_size, nn)
+        else: 
+            f_new, g_new = self.funObj(w_new, self.X, self.y,True)
+            
+        return (delta, f_new, g_new)
+    
 
     def svmUpdate(self, ww, batch_size=1):
 
@@ -82,10 +112,98 @@ class logReg:
         delta = grad / batch_size
 
         return delta
+    
+    
+    def sgd_private_fit(self, alpha, eta, batch_size=0, *args):
+
+        n, d = self.X.shape
+        batchesX = []
+        batchesY = []
+        within = True
+        i=0
+        
+        while within:
+            if (i+batch_size <= n):
+                batchesX.append(self.X[i:i+batch_size,:])
+                batchesY.append(self.y[i:i+batch_size])
+                i+=batch_size
+            else:
+                within = False
+      
+    
+        print ("Training model via private SGD.")
+        # Parameters of the Optimization
+        optTol = 1e-2
+
+        # Initial guess
+        self.w = np.zeros(d)
+        self.hist_grad = 0
+        funEvals = 1
+    #---------------------------------------------------------------------------
+        #Generate random samples from isotropic multivariate laplace distribution using emcee
+    
+        def lnprob(x,alpha):
+            return -(alpha/2)*np.linalg.norm(x)
+    
+        ndim = d
+        nwalkers = 3*d
+        p0 = np.random.rand(ndim*nwalkers).reshape((nwalkers,ndim))
+        #p0 = np.random.randn(nwalkers, ndim)
+        sampler = emcee.EnsembleSampler(nwalkers,ndim,lnprob,args=[alpha])
+        
+        pos, prob, state = sampler.run_mcmc(p0, 100)
+        sampler.reset()
+        
+        #sampler.run_mcmc(pos, 1000)
+        sampler.run_mcmc(pos, 1000, rstate0=state)
+        
+        print("Mean acceptance fraction:", np.mean(sampler.acceptance_fraction))
+        #print("Autocorrelation time:", sampler.get_autocorr_time())
+        
+        sample = sampler.flatchain
+    #---------------------------------------------------------------------------
+    
+        while True:
+            d1,d2 = sample.shape
+            z = np.random.randint(0,d1)
+            Z = sample[z]
+        
+            l = np.random.randint(0,len(batchesX))
+            Xbatch = batchesX[l]
+            ybatch = batchesY[l]
+             
+    
+            (delta, f_new, g) = self.privateFun2(eta,alpha,self.w, Z, Xbatch, ybatch,batch_size, *args)
+            funEvals += 1
+
+            # Print progress
+            if self.verbose > 0:
+                print("%d - loss: %.3f" % (funEvals, f_new))
+                print("%d - g_norm: %.3f" % (funEvals, norm(g)))
+
+            # Update parameters
+            self.w = self.w + delta
+
+            # Test termination conditions
+            optCond = norm(g, float('inf'))
+
+            if optCond < optTol:
+                if self.verbose:
+                    print("Problem solved up to optimality tolerance %.3f" % optTol)
+                    break
+
+            if funEvals >= self.maxEvals:
+                if self.verbose:
+                    print("Reached maximum number of function evaluations %d" % self.maxEvals)
+                    break
+
+        print ("Done fitting.")
+
+    
 
     def sgd_fit(self, theta, batch_size=0, *args):
 
-        print "Training model via SGD."
+        print ("Training model via SGD.")
 
         # Parameters of the Optimization
         optTol = 1e-2
@@ -124,11 +242,11 @@ class logReg:
                           self.maxEvals)
                 break
 
-        print "Done fitting."
+        print ("Done fitting.")
 
     def fit(self):
 
-        print "Normal Fit."
+        print ("Normal Fit.")
 
         (self.w, self.alpha, f, _) = minimizers.findMin(self.funObj, self.w, self.alpha,
                                                         self.maxEvals,
@@ -187,15 +305,24 @@ class logRegL2(logReg):
 
         #utils.check_gradient(self, self.X, self.y)
 
-    def funObj(self, ww, X, y):
+    def funObj(self, ww, X, y, scale=False, batch_size=1, n=1):
         yXw = y * X.dot(ww)
 
         # Calculate the function value
-        f = np.sum(np.logaddexp(0, -yXw)) + 0.5 * self.lammy * ww.T.dot(ww)
+        f = (1/n)*np.sum(np.logaddexp(0, -yXw)) + 0.5 * self.lammy * ww.T.dot(ww)
 
         # Calculate the gradient value
         res = - y / np.exp(np.logaddexp(0, yXw))
-        g = X.T.dot(res) + self.lammy * ww
+        if scale:
+            s = np.linalg.norm(res)
+            if (s > 1):
+                g = (1/batch_size)*X.T.dot(res)/s + self.lammy * ww
+            else:
+                g = (1/batch_size)*X.T.dot(res) + self.lammy * ww
+        else:
+            g = (1/batch_size)*X.T.dot(res) + self.lammy * ww
+            
+                
 
         return f, g
 
