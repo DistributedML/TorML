@@ -314,7 +314,7 @@ class logRegL2(logReg):
         # Calculate the gradient value
         res = - y / np.exp(np.logaddexp(0, yXw))
         if scale:
-            s = np.linalg.norm(res)
+            s = np.linalg.norm(X.T.dot(res))
             if (s > 1):
                 g = (1/batch_size)*X.T.dot(res)/s + self.lammy * ww
             else:
