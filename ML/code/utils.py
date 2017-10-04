@@ -7,72 +7,27 @@ from numpy.linalg import norm
 import pandas as pd
 import pdb
 
+def sliceup(numSplits, dataset):
 
-def sliceupLinear(numSplits):
-    slices = pd.read_csv(os.path.join(
-        '..', "data", 'slice_localization_data.csv'))
-    n, d = slices.shape
-
-    npslices = slices.ix[np.random.permutation(n), :].as_matrix()
-    split = int(n * 0.70)
-
-    X = npslices[0:split, 1:d - 1]
-    y = npslices[0:split, -1]
-
-    Xvalid = npslices[(split + 1):n, 1:d - 1]
-    yvalid = npslices[(split + 1):n, -1]
-
-    X, mu, sigma = standardize_cols(X)
-    Xvalid, _, _ = standardize_cols(Xvalid, mu, sigma)
-
-    X = normalize_rows(X)
-    Xvalid = normalize_rows(Xvalid)
-
-    X = np.hstack([np.ones((X.shape[0], 1)), X])
-    Xvalid = np.hstack([np.ones((Xvalid.shape[0], 1)), Xvalid])
-
-    data = np.hstack((Xvalid, yvalid.reshape((Xvalid.shape[0], 1))))
-    np.savetxt("../data/linTest.csv", data, delimiter=',')
-
-    sliceup(numSplits, X, y, "linData")
-
-
-def sliceupLogistic(numSplits):
-
-    data = load_pkl(os.path.join('..', "data", 'logisticData.pkl'))
+    data = load_dataset(dataset)
 
     X, y = data['X'], data['y']
-    Xvalid, yvalid = data['Xvalidate'], data['yvalidate']
+    Xvalid, yvalid = data['Xvalid'], data['yvalid']
 
-    X, mu, sigma = standardize_cols(X)
-    Xvalid, _, _ = standardize_cols(Xvalid, mu, sigma)
+    randseed = np.random.permutation(X.shape[0])
+    X = X[randseed, :]
+    y = y[randseed]
 
-    X = np.hstack([np.ones((X.shape[0], 1)), X])
-    Xvalid = np.hstack([np.ones((Xvalid.shape[0], 1)), Xvalid])
+    numRows = int(X.shape[0] / numSplits)
 
-    data = np.hstack((Xvalid, yvalid.reshape((Xvalid.shape[0], 1))))
+    for i in range(numSplits):
+        dataslice = np.hstack((X[(i * numRows):((i + 1) * numRows), :],
+                        y[(i * numRows):((i + 1) * numRows)].reshape((numRows, 1))))
+        np.savetxt("../data/" + dataset + str(i + 1) + ".csv", dataslice, delimiter=",")
 
-    pdb.set_trace()
-
-    np.savetxt("../data/logTest.csv", data, delimiter=',')
-
-    sliceup(numSplits, X, y, "logData")
-
-
-def sliceup(numSplits, X, y, dataset):
-
-    if X.shape[0] % numSplits == 0:
-        randseed = np.random.permutation(X.shape[0])
-        X = X[randseed, :]
-        y = y[randseed]
-
-        numRows = int(X.shape[0] / numSplits)
-
-        for i in range(numSplits):
-            data = np.hstack((X[(i * numRows):((i + 1) * numRows), :],
-                              y[(i * numRows):((i + 1) * numRows)].reshape((numRows, 1))))
-            np.savetxt("../data/" + dataset + str(i + 1) +
-                       ".csv", data, delimiter=",")
+    numTestRows = Xvalid.shape[0]
+    datatest = np.hstack((Xvalid, yvalid.reshape((numTestRows, 1))))
+    np.savetxt("../data/" + dataset + "test.csv", datatest, delimiter=",")
 
 
 def load_dataset(dataset_name):

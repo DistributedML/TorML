@@ -9,7 +9,7 @@ import pdb
 
 if __name__ == "__main__":
 
-    dataset = "logisticData"
+    dataset = "magic"
     data = utils.load_dataset(dataset)
 
     X = data['X']
@@ -17,15 +17,6 @@ if __name__ == "__main__":
     oweights = np.zeros(X.shape[1])
 
     batch_size = 5
-
-    # Object
-    model1 = logistic_model.logRegL2(X, y, lammy=0.1)
-
-    for i in xrange(20000):
-        (deltas, f, g) = model1.privateFun(1, oweights, batch_size)
-        oweights = oweights + deltas
-
-    print("Test error: %d", logistic_model_test.test(oweights))
 
     # Global
     numFeatures = logistic_model.init(dataset)
@@ -35,4 +26,5 @@ if __name__ == "__main__":
         deltas = logistic_model.privateFun(1, weights, batch_size)
         weights = weights + deltas
 
-    print("Test error: %d", logistic_model_test.test(weights))
+    print("Train error: %d", logistic_model_test.train_error(weights))
+    print("Test error: %d", logistic_model_test.test_error(weights))
