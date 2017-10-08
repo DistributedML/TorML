@@ -57,6 +57,27 @@ def load_dataset(dataset_name):
                 "Xvalid": Xvalid,
                 "yvalid": yvalid}
 
+    elif dataset_name == "susy":
+
+        susy = pd.read_csv("../data/SUSY.csv", header=None).as_matrix()
+        nn, dd = susy.shape
+
+        idx = np.random.permutation(n)
+        
+        npsusy = susy[idx,:]
+
+        X = npsusy[0:4000000,1:dd]
+        y = npsusy[0:4000000,0]
+
+        Xvalid = npsusy[4000000:nn,1:dd]
+        yvalid = npsusy[4000000:nn,0]
+
+        X, mu, sigma = standardize_cols(X)
+        Xvalid, _, _ = standardize_cols(Xvalid, mu, sigma)
+
+        X = np.hstack([np.ones((X.shape[0], 1)), X])
+        Xvalid = np.hstack([np.ones((Xvalid.shape[0], 1)), Xvalid])
+
     elif dataset_name == "slices":
 
         slices = pd.read_csv(os.path.join(
