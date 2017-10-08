@@ -9,7 +9,7 @@ import pdb
 
 if __name__ == "__main__":
 
-    dataset = "magic"
+    dataset = "susy1"
     data = utils.load_dataset(dataset)
 
     X = data['X']

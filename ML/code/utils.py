@@ -62,21 +62,30 @@ def load_dataset(dataset_name):
         susy = pd.read_csv("../data/SUSY.csv", header=None).as_matrix()
         nn, dd = susy.shape
 
-        idx = np.random.permutation(n)
+        idx = np.random.permutation(nn)
         
         npsusy = susy[idx,:]
 
         X = npsusy[0:4000000,1:dd]
         y = npsusy[0:4000000,0]
+        y[np.where(y == 0)] = -1
 
         Xvalid = npsusy[4000000:nn,1:dd]
         yvalid = npsusy[4000000:nn,0]
+        yvalid[np.where(yvalid == 0)] = -1
 
         X, mu, sigma = standardize_cols(X)
         Xvalid, _, _ = standardize_cols(Xvalid, mu, sigma)
 
         X = np.hstack([np.ones((X.shape[0], 1)), X])
         Xvalid = np.hstack([np.ones((Xvalid.shape[0], 1)), Xvalid])
+
+        X = normalize_rows(X)
+        Xvalid = normalize_rows(Xvalid)
+
+        return {"X": X, "y": y,
+                "Xvalid": Xvalid,
+                "yvalid": yvalid}
 
     elif dataset_name == "slices":
 
@@ -167,7 +176,7 @@ def load_dataset(dataset_name):
 
         # This is the main section typically called by the tor client.
         # Thus we have hardcoded an absolute path from that location
-        data = pd.read_csv(os.path.join('../ML', "data", dataset_name + '.csv'))
+        data = pd.read_csv(os.path.join('../', "data", dataset_name + '.csv'))
         d = data.shape[1]
 
         data = data.as_matrix()
