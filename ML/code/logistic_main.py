@@ -1,5 +1,6 @@
 from __future__ import division
 from numpy.linalg import norm
+import matplotlib.pyplot as plt 
 import logistic_model
 import logistic_model_test
 import numpy as np
@@ -9,22 +10,37 @@ import pdb
 
 if __name__ == "__main__":
 
-    dataset = "susy1"
+    dataset = "susy4"
     data = utils.load_dataset(dataset)
+
+    print("Download complete.")
 
     X = data['X']
     y = data['y']
-    oweights = np.zeros(X.shape[1])
 
-    batch_size = 5
+    batch_size = 50
+    iterations = 20000
 
     # Global
     numFeatures = logistic_model.init(dataset)
-    weights = np.zeros(numFeatures)
+    weights = np.random.rand(numFeatures)
+    
+    rolling_average = np.zeros([iterations, numFeatures])
+    all_delta = np.zeros([iterations, numFeatures])
+    progress = np.zeros(iterations)
 
-    for i in xrange(20000):
-        deltas = logistic_model.privateFun(1, weights, batch_size)
+    for i in xrange(iterations):
+        (ff, gg, deltas) = logistic_model.privateFun(1, weights, batch_size)
         weights = weights + deltas
+        progress[i] = ff
+        if i % 1000 == 0:
+            print(i)
+
+    plt.plot(progress)
+
+    #pdb.set_trace()
+
+    plt.show()
 
     print("Train error: %d", logistic_model_test.train_error(weights))
     print("Test error: %d", logistic_model_test.test_error(weights))
