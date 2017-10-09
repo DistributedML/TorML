@@ -120,7 +120,7 @@ def load_dataset(dataset_name):
 
     elif dataset_name == "magic":
 
-        magic = pd.read_csv(os.path.join('../ML', "data", 'magic04.data'))
+        magic = pd.read_csv(os.path.join('..', "data", 'magic04.data'))
         nn, dd = magic.shape
 
         y = magic.ix[:, dd - 1].as_matrix()
@@ -128,12 +128,17 @@ def load_dataset(dataset_name):
         y[np.where(y == 'h')] = -1
 
         npmagic = magic.ix[np.random.permutation(
-            nn), :].as_matrix().astype(int)
+            nn), :].as_matrix().astype(float)
         split = int(nn * 0.70)
 
-        X = npmagic[0:split - 1, 0:dd - 2]
-        y = npmagic[0:split - 1, dd - 1]
-        Xvalid = npmagic[split:nn - 1, 0:dd - 2]
+        # Add another column for the square of each value
+        data = npmagic[:, 0:dd-1]
+        data = np.hstack([data, (data * data)])
+
+        X = data[0:split, :]
+        y = npmagic[0:split, dd - 1]
+
+        Xvalid = data[split:nn - 1]
         yvalid = npmagic[split:nn - 1, dd - 1]
 
         X, mu, sigma = standardize_cols(X)
@@ -179,7 +184,7 @@ def load_dataset(dataset_name):
 
         # This is the main section typically called by the tor client.
         # Thus we have hardcoded an absolute path from that location
-        data = pd.read_csv(os.path.join('../ML', "data", dataset_name + '.csv'))
+        data = pd.read_csv(os.path.join('..', "data", dataset_name + '.csv'))
         d = data.shape[1]
 
         data = data.as_matrix()
@@ -191,11 +196,16 @@ def load_dataset(dataset_name):
 
 def normalize_rows(X):
 
-    # Sets all rows to have L2 norm of 1. Needed for diff priv
+    # Sets the max row to have L2 norm of 1. Needed for diff priv
     nn, dd = X.shape
+    max_norm = 0
 
     for i in xrange(nn):
-        X[i, ] = X[i, ] / norm(X[i, ], 2)
+        new_norm = norm(X[i, ], 2)
+        if new_norm > max_norm:
+            max_norm = new_norm
+
+    X = X / max_norm
 
     return X
 

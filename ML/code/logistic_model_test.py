@@ -3,10 +3,10 @@ import numpy as np
 import utils
 import pdb
 
-data = utils.load_dataset("susytest")
+data = utils.load_dataset("magictest")
 Xtest, ytest = data['X'], data['y']
 
-data = utils.load_dataset("susy1")
+data = utils.load_dataset("magic1")
 XBin, yBin = data['X'], data['y']
 
 
