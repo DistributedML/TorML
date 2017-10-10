@@ -3,15 +3,18 @@ from numpy.linalg import norm
 import numpy as np
 import utils
 import pdb
+import emcee
 
-lammy = 0.1
+lammy = 0.01
 verbose = 1
 X = 0
 y = 0
 iteration = 1
 alpha = 1e-2
+epsilon = 10
 d = 0
 hist_grad = 0
+scale = True
 
 def init(dataset):
 
@@ -29,10 +32,30 @@ def init(dataset):
     global hist_grad
     hist_grad = np.zeros(d)
 
+    global samples
+    samples = []
+
+    def lnprob(x,alpha):
+        return -(alpha/2)*np.linalg.norm(x)
+        
+    nwalkers = 10 * d
+    sampler = emcee.EnsembleSampler(nwalkers, d, lnprob, args=[epsilon])
+    
+    p0 = [np.random.rand(d) for i in range(nwalkers)]
+    pos, _, state = sampler.run_mcmc(p0,100)
+
+    sampler.reset()
+    sampler.run_mcmc(pos, 1000, rstate0=state)
+    
+    print("Mean acceptance fraction:", np.mean(sampler.acceptance_fraction))
+    #print("Autocorrelation time:", sampler.get_autocorr_time())
+    
+    samples = sampler.flatchain
+
     return d
 
 
-def funObj(ww, X, y):
+def funObj(ww, X, y, batch_size):
     yXw = y * X.dot(ww)
 
     # Calculate the function value
@@ -40,7 +63,10 @@ def funObj(ww, X, y):
 
     # Calculate the gradient value
     res = - y / np.exp(np.logaddexp(0, yXw))
-    g = X.T.dot(res) + lammy * ww
+    if scale:
+        g = (1/batch_size)*X.T.dot(res)/max(1, np.linalg.norm(X.T.dot(res))) + lammy * ww
+    else:
+        g = (1/batch_size)*X.T.dot(res) + lammy * ww
 
     return f, g
 
@@ -62,7 +88,7 @@ def privateFun(theta, ww, batch_size=0):
         # Just take the full range
         idx = range(nn)
 
-    f, g = funObj(ww, X[idx, :], y[idx])
+    f, g = funObj(ww, X[idx, :], y[idx], batch_size)
 
     # Batch averaging
     if batch_size > 0 and batch_size < nn:
@@ -76,7 +102,11 @@ def privateFun(theta, ww, batch_size=0):
 
     # Determine the actual step magnitude
     #delta = -alpha * ada_grad
-    delta = -alpha * g
+
+    d1, _ = samples.shape
+    Z = samples[np.random.randint(0, d1)]
+
+    delta = -alpha * (g + (1/batch_size) * Z)
 
     # Weird way to get NON top k values
     if theta < 1:
@@ -85,7 +115,7 @@ def privateFun(theta, ww, batch_size=0):
         delta[param_filter] = 0
 
     w_new = ww + delta
-    f_new, g_new = funObj(w_new, X[idx, :], y[idx])
+    f_new, g_new = funObj(w_new, X[idx, :], y[idx], batch_size)
     iteration = iteration + 1
 
     return (f, g, delta)

@@ -10,7 +10,7 @@ import pdb
 
 if __name__ == "__main__":
 
-    dataset = "magic1"
+    dataset = "magic"
     data = utils.load_dataset(dataset)
 
     print("Download complete.")
@@ -19,7 +19,7 @@ if __name__ == "__main__":
     y = data['y']
 
     batch_size = 50
-    iterations = 100000
+    iterations = 1000000
 
     # Global
     numFeatures = logistic_model.init(dataset)
@@ -37,13 +37,11 @@ if __name__ == "__main__":
         progress[i] = ff
         train_progress[i] = logistic_model_test.train_error(weights)
         test_progress[i] = logistic_model_test.test_error(weights)
-        if i % 1000 == 0:
+        if i % 10000 == 0:
             print(i)
 
     plt.plot(train_progress, "green")
     plt.plot(test_progress, "red")
-
-    #pdb.set_trace()
 
     plt.show()
 
