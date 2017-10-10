@@ -181,7 +181,6 @@ func runRouter(address string) {
 	checkError(err)
 
 	buf := make([]byte, 2048)
-	outBuf := make([]byte, 2048)
 	registeredNodes = make(map[string]string)
 	myModels = make(map[string]Model)
 	myValidators = make(map[string]Validator)
@@ -198,73 +197,83 @@ func runRouter(address string) {
 
 		var inData MessageData
 		Logger.UnpackReceive("Received Message From Client", buf[0:], &inData)
-	
-		var ok bool
 
-		switch inData.Type {
-
-			// Client is sending a gradient update. Apply it and return myWeights
-			case "grad":
-
-				modelId := inData.Model.ModelId
-
-				if len(myModels[modelId].Clients) < myModels[modelId].MinClients {
-					outBuf = Logger.PrepareSend("Replying", make([]float64, 0))
-				} else {
-
-					if rand.Float64() > MULTICAST_RATE {
-						fmt.Println("Doing a validation multicast")
-						startValidation(modelId)
-					}
-
-					ok = gradientUpdate(inData.SourceNode, modelId, inData.Deltas)
-
-					clientState := myModels[modelId].Clients[inData.SourceNode]
-
-					// generates a float from 0 to 1
-					if isClientValidating(modelId, inData.SourceNode) {
-						outBuf = Logger.PrepareSend("Replying", clientState.Weights)
-						clientState.IsComputingLocal = true
-					} else {
-						outBuf = Logger.PrepareSend("Replying", myModels[inData.Model.ModelId].GlobalWeights)
-						clientState.IsComputingLocal = false
-					}
-
-					myModels[inData.Model.ModelId].Clients[inData.SourceNode] = clientState
-				}
-
-			// Add new nodes
-			case "join":
-				ok = processJoin(inData.SourceNode, inData.Model)
-				if ok {
-			  		outBuf = Logger.PrepareSend("Replying", 1)
-				} else {
-					outBuf = Logger.PrepareSend("Replying", 0)
-				}
-
-			// curate a new model
-			case "curator":
-				ok = startModel(inData.Model.ModelId, 
-					inData.Model.NumFeatures,
-					inData.Model.MinClients)
-				if ok {
-			  		outBuf = Logger.PrepareSend("Replying", 1)
-				} else {
-					outBuf = Logger.PrepareSend("Replying", 0)
-				}				
-
-			case "beat":
-				fmt.Printf("Heartbeat from %s\n", inData.SourceNode)
-				outBuf = Logger.PrepareSend("Replying to heartbeat", 1)
-
-			default:
-				fmt.Println("Got a message type I dont recognize.")
-				ok = false
-				outBuf = nil
-				
-		}
+		outBuf := processMsg(inData, Logger)
 	  	conn.Write(outBuf)
+
 	}
+}
+
+func processMsg(inData MessageData, Logger *govec.GoLog) []byte {
+
+	outBuf := make([]byte, 2048)
+	var ok bool
+
+	switch inData.Type {
+
+		// Client is sending a gradient update. Apply it and return myWeights
+		case "grad":
+
+			modelId := inData.Model.ModelId
+
+			if len(myModels[modelId].Clients) < myModels[modelId].MinClients {
+				outBuf = Logger.PrepareSend("Replying", make([]float64, 0))
+			} else {
+
+				if rand.Float64() > MULTICAST_RATE {
+					fmt.Println("Doing a validation multicast")
+					startValidation(modelId)
+				}
+
+				ok = gradientUpdate(inData.SourceNode, modelId, inData.Deltas)
+
+				clientState := myModels[modelId].Clients[inData.SourceNode]
+
+				// generates a float from 0 to 1
+				if isClientValidating(modelId, inData.SourceNode) {
+					outBuf = Logger.PrepareSend("Replying", clientState.Weights)
+					clientState.IsComputingLocal = true
+				} else {
+					outBuf = Logger.PrepareSend("Replying", myModels[inData.Model.ModelId].GlobalWeights)
+					clientState.IsComputingLocal = false
+				}
+
+				myModels[inData.Model.ModelId].Clients[inData.SourceNode] = clientState
+			}
+
+		// Add new nodes
+		case "join":
+			ok = processJoin(inData.SourceNode, inData.Model)
+			if ok {
+		  		outBuf = Logger.PrepareSend("Replying", 1)
+			} else {
+				outBuf = Logger.PrepareSend("Replying", 0)
+			}
+
+		// curate a new model
+		case "curator":
+			ok = startModel(inData.Model.ModelId, 
+				inData.Model.NumFeatures,
+				inData.Model.MinClients)
+			if ok {
+		  		outBuf = Logger.PrepareSend("Replying", 1)
+			} else {
+				outBuf = Logger.PrepareSend("Replying", 0)
+			}				
+
+		case "beat":
+			fmt.Printf("Heartbeat from %s\n", inData.SourceNode)
+			outBuf = Logger.PrepareSend("Replying to heartbeat", 1)
+
+		default:
+			fmt.Println("Got a message type I dont recognize.")
+			ok = false
+			outBuf = nil
+			
+	}
+
+	return outBuf
+
 }
 
 func testModel(model Model, node string) (float64, float64) {

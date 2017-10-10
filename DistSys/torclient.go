@@ -69,6 +69,8 @@ func pyInit(datasetName string) {
   	model.MinClients = 5
   	pulledGradient = make([]float64, model.NumFeatures)
 
+  	fmt.Printf("Sucessfully pulled dataset. Features: %d\n", model.NumFeatures)
+
 }
 
 func main() {

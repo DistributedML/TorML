@@ -120,7 +120,7 @@ def load_dataset(dataset_name):
 
     elif dataset_name == "magic":
 
-        magic = pd.read_csv(os.path.join('..', "data", 'magic04.data'))
+        magic = pd.read_csv(os.path.join('../ML', "data", 'magic04.data'))
         nn, dd = magic.shape
 
         y = magic.ix[:, dd - 1].as_matrix()
@@ -184,7 +184,7 @@ def load_dataset(dataset_name):
 
         # This is the main section typically called by the tor client.
         # Thus we have hardcoded an absolute path from that location
-        data = pd.read_csv(os.path.join('..', "data", dataset_name + '.csv'))
+        data = pd.read_csv(os.path.join('../ML', "data", dataset_name + '.csv'))
         d = data.shape[1]
 
         data = data.as_matrix()
