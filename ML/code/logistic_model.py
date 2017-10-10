@@ -118,4 +118,4 @@ def privateFun(theta, ww, batch_size=0):
     f_new, g_new = funObj(w_new, X[idx, :], y[idx], batch_size)
     iteration = iteration + 1
 
-    return (f, g, delta)
+    return delta

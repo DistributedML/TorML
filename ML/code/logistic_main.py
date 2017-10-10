@@ -32,9 +32,8 @@ if __name__ == "__main__":
     test_progress = np.zeros(iterations)
 
     for i in xrange(iterations):
-        (ff, gg, deltas) = logistic_model.privateFun(1, weights, batch_size)
+        deltas = logistic_model.privateFun(1, weights, batch_size)
         weights = weights + deltas
-        progress[i] = ff
         train_progress[i] = logistic_model_test.train_error(weights)
         test_progress[i] = logistic_model_test.test_error(weights)
         if i % 10000 == 0:
