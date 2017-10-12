@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/binary"
 	"flag"
 	"fmt"
@@ -8,6 +10,7 @@ import (
 	"net"
 	"os"
 	"time"
+	"strings"
 	"golang.org/x/net/proxy"
 	"github.com/DistributedClocks/GoVector/govec"
 	"github.com/sbinet/go-python"
@@ -29,8 +32,9 @@ type MessageData struct {
 
 type ModelInfo struct {
 	ModelId	 		string
+	Key				string
 	NumFeatures 	int
-	MinClients		int
+	MinClients    	int
 }
 
 var (
@@ -92,7 +96,7 @@ func main() {
   	
   	sendGradMessage(logger, torDialer, pulledGradient, true)
 
-  	for i := 0; i < 20000; i++ { 
+  	for { 
     	sendGradMessage(logger, torDialer, pulledGradient, false)
   	}
 
@@ -289,12 +293,62 @@ func sendJoinMessage(logger *govec.GoLog, torDialer proxy.Dialer) int {
 	n, errRead := conn.Read(inBuf)
 	checkError(errRead)
 
-	var incomingMsg int
-	logger.UnpackReceive("Received Message from server", inBuf[0:n], &incomingMsg)
+	var puzzle string 
+	var solution string
+	var solved bool
+	logger.UnpackReceive("Received puzzle from server", inBuf[0:n], &puzzle)
+	conn.Close()
+
+	for !solved {
+
+		h := sha256.New()
+		h.Write([]byte(puzzle))
+
+		// Attempt a candidate
+		timeHash := sha256.New()
+		timeHash.Write([]byte(time.Now().String()))
+
+		solution = hex.EncodeToString(timeHash.Sum(nil))
+	    h.Write([]byte(solution))
+
+	    hashed := hex.EncodeToString(h.Sum(nil))
+	    fmt.Println(hashed)
+
+		if strings.HasSuffix(hashed, "0000") {
+		    fmt.Println("BINGO!")
+		    solved = true
+		}
+
+	}
+
+	conn, err = getServerConnection(torDialer)
+	checkError(err)
+
+	model.Key = solution  
+	msg.Type = "solve"
+    msg.Model = model
+
+	outBuf = logger.PrepareSend("Sending puzzle solution", msg)
+	_, errWrite = conn.Write(outBuf)
+	checkError(errWrite)
+	
+	inBuf = make([]byte, 512)
+	n, errRead = conn.Read(inBuf)
+	checkError(errRead)
+
+	var reply int
+	logger.UnpackReceive("Received Message from server", inBuf[0:n], &reply)
+
+	if reply == 1 {
+		fmt.Println("Got ACK for puzzle")
+		model.Key = solution
+	} else {
+		fmt.Println("My puzzle solution failed.")
+	}
 
 	conn.Close()
 
-	return incomingMsg
+	return reply
 
 }
 

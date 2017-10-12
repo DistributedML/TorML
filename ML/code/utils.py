@@ -19,6 +19,9 @@ def sliceup(numSplits, dataset):
     y = y[randseed]
 
     numRows = int(X.shape[0] / numSplits)
+    np.savetxt("../data/" + dataset + "train.csv", 
+        np.hstack((X, y.reshape((X.shape[0], 1)))), 
+        delimiter=",")
 
     for i in range(numSplits):
         dataslice = np.hstack((X[(i * numRows):((i + 1) * numRows), :],

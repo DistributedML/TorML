@@ -1,7 +1,9 @@
 package main
 
 import (
+	"crypto/sha256"
 	"encoding/csv"
+	"encoding/hex"
 	"fmt"
 	"math"
 	"math/rand"
@@ -9,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 	"github.com/DistributedClocks/GoVector/govec"
 	"github.com/sbinet/go-python"
 	"github.com/gonum/matrix/mat64"
@@ -23,22 +26,28 @@ type MessageData struct {
 
 type ModelInfo struct {
 	ModelId	 		string
+	Key				string
 	NumFeatures 	int
 	MinClients    	int
 }
 
 type ClientState struct {
 	NumIterations		int
+	NumValidations      int
 	IsComputingLocal 	bool
 	Weights 			[]float64
+	OutlierScore		float64
 }
 
 // An active model: list of participants and weights
 type Model struct {
-	// use a map to store each local server's local updates
+	// Model based parameters: dimensions, w*
 	NumFeatures 		int
-	Clients 	 		map[string]ClientState
 	GlobalWeights 		[]float64
+
+	// Bookkeeping
+	Puzzles				map[string]string
+	Clients 	 		map[string]ClientState
 	MinClients 			int
 }
 
@@ -57,7 +66,8 @@ var (
 	myModels 			map[string]Model
 	myValidators	 	map[string]Validator
 
-	MULTICAST_RATE		float64 = 0.97
+	MULTICAST_RATE		float64 = 0.95
+	THRESHOLD			float64 = 0.000001
 
 	// Test Module for python
 	testModule  *python.PyObject
@@ -86,7 +96,9 @@ func handler(w http.ResponseWriter, r *http.Request) {
     	
     		fmt.Fprintf(w, "\n");	
     		train_error, test_error = testModel(model, node)
-    		fmt.Fprintf(w, "%s iterations: %d\n", node, clientState.NumIterations)	
+    		fmt.Fprintf(w, "%s iterations: %d\n", node, clientState.NumIterations)
+    		fmt.Fprintf(w, "%s validations: %d\n", node, clientState.NumValidations)
+    		fmt.Fprintf(w, "%s L2 outlier score: %f\n", node, clientState.OutlierScore)	
     		fmt.Fprintf(w, "%s train Loss: %f\n", node, train_error)	
     		fmt.Fprintf(w, "%s test Loss: %f\n", node, test_error)	
     	
@@ -221,7 +233,6 @@ func processMsg(inData MessageData, Logger *govec.GoLog) []byte {
 			} else {
 
 				if rand.Float64() > MULTICAST_RATE {
-					fmt.Println("Doing a validation multicast")
 					startValidation(modelId)
 				}
 
@@ -243,12 +254,8 @@ func processMsg(inData MessageData, Logger *govec.GoLog) []byte {
 
 		// Add new nodes
 		case "join":
-			ok = processJoin(inData.SourceNode, inData.Model)
-			if ok {
-		  		outBuf = Logger.PrepareSend("Replying", 1)
-			} else {
-				outBuf = Logger.PrepareSend("Replying", 0)
-			}
+			puzzle := makePuzzle(inData.Model.ModelId)
+			outBuf = Logger.PrepareSend("Sending Puzzle", puzzle)
 
 		// curate a new model
 		case "curator":
@@ -260,6 +267,14 @@ func processMsg(inData MessageData, Logger *govec.GoLog) []byte {
 			} else {
 				outBuf = Logger.PrepareSend("Replying", 0)
 			}				
+
+		case "solve":
+			ok = processJoin(inData.SourceNode, inData.Model)
+			if ok {
+		  		outBuf = Logger.PrepareSend("Replying", 1)
+			} else {
+				outBuf = Logger.PrepareSend("Replying", 0)
+			}
 
 		case "beat":
 			fmt.Printf("Heartbeat from %s\n", inData.SourceNode)
@@ -312,6 +327,7 @@ func startModel(modelId string, numFeatures int, minClients int) bool {
 	var newModel Model
 
 	newModel.Clients = make(map[string]ClientState)
+	newModel.Puzzles = make(map[string]string)
 	newModel.NumFeatures = numFeatures
 	newModel.GlobalWeights = newRandomModel(numFeatures)
 	newModel.MinClients = minClients
@@ -320,6 +336,33 @@ func startModel(modelId string, numFeatures int, minClients int) bool {
 	fmt.Printf("Added a new model: %s\n", modelId)
 
 	return true
+}
+
+/*
+	Generates a new cryptographic puzzle for a client to solve
+*/
+func makePuzzle(modelId string) string {
+
+	theModel, exists := myModels[modelId]
+	if exists {
+
+		// Generate a problem based on the current time
+		timeHash := sha256.New()
+		timeHash.Write([]byte(time.Now().String()))
+
+		puzzle := hex.EncodeToString(timeHash.Sum(nil))
+		theModel.Puzzles[puzzle] = "unsolved"
+		myModels[modelId] = theModel
+
+		fmt.Printf("Made a new puzzle for model %s\n", modelId)
+		return puzzle
+
+	} 
+	
+	// Return an empty string for bad join
+	fmt.Printf("Bad Puzzle request for model %s\n", modelId)
+	return ""
+
 }
 
 func processJoin(node string, model ModelInfo) bool {
@@ -342,11 +385,34 @@ func processJoin(node string, model ModelInfo) bool {
 		return false
 	}
 
-	// Add node
-	theModel.Clients[node] = ClientState{0, false, newRandomModel(model.NumFeatures)}
-	fmt.Printf("Joined %s in model %s \n", node, model.ModelId)
+	// Verify the solution
+	
+	for lock, key := range theModel.Puzzles {
 
-	return true
+		hash := sha256.New()
+
+		if key == "unsolved" {
+
+			hash.Write([]byte(lock))
+			hash.Write([]byte(model.Key))
+			hashString := hex.EncodeToString(hash.Sum(nil))
+			
+			if strings.HasSuffix(hashString, "0000") {
+
+				// Add node
+				theModel.Clients[node] = ClientState{0, 0, false, newRandomModel(model.NumFeatures), 0}
+				fmt.Printf("Joined %s in model %s \n", node, model.ModelId)
+				
+				// Write the solution
+				theModel.Puzzles[lock] = key
+				myModels[model.ModelId] = theModel
+				return true
+
+			}
+		}
+	}
+
+	return false
 }
 
 func gradientUpdate(nodeId string, modelId string, deltas []float64) bool {
@@ -375,7 +441,7 @@ func gradientUpdate(nodeId string, modelId string, deltas []float64) bool {
 
 				validator.ClientResponses[nodeId] = validatorWeights
 				validator.NumResponses++
-				clientState.NumIterations++
+				clientState.NumValidations++
 				myValidators[modelId] = validator
 				fmt.Printf("Validation update from %s on %s \n", nodeId, modelId)
 
@@ -396,6 +462,8 @@ func gradientUpdate(nodeId string, modelId string, deltas []float64) bool {
 					theModel.GlobalWeights[j] += deltas[j]
 				}
 				
+				clientState.NumIterations++
+				theModel.Clients[nodeId] = clientState
 				myModels[modelId] = theModel
 				fmt.Printf("Grad update from %s on %s \n", nodeId, modelId)
 							
@@ -408,13 +476,16 @@ func gradientUpdate(nodeId string, modelId string, deltas []float64) bool {
 
 func runValidation(modelId string) {
 
+	// Convert client responses into mat64 vectors
 	scores := make(map[string]*mat64.Dense)
 	for node, model := range myValidators[modelId].ClientResponses {
 		scores[node] = mat64.NewDense(myModels[modelId].NumFeatures, 1, model)
 	}
 
+	theModel := myModels[modelId]
 	for node1, vector1 := range scores {
 		
+		// Sum distance between vector1 and all other vectors
 		var rollingSum float64
 		for _, vector2 := range scores {
 			rollingSum += FindEucDistance(vector1, vector2)
@@ -426,7 +497,19 @@ func runValidation(modelId string) {
 		// Normalize for number of features
 		rollingSum /= float64(myModels[modelId].NumFeatures)
 
-		fmt.Printf("Average Distance for %s: %.6f \n", node1, rollingSum)
+		// Atomic update
+		clientState := theModel.Clients[node1]
+		clientState.OutlierScore += rollingSum
+		theModel.Clients[node1] = clientState
+
+		// save the current rolling
+		rollingAvg := rollingSum / float64(clientState.NumValidations)
+		fmt.Printf("Average Distance for %s: %.9f \n", node1, rollingAvg)
+
+		if rollingAvg > THRESHOLD {
+			fmt.Printf("node %s has average %7f over THRESHOLD %7f. KICKED! \n", 
+				node1, rollingAvg, THRESHOLD)
+		}
 
 	}
 
@@ -440,6 +523,8 @@ func startValidation(modelId string) {
 
 	_, exists := myValidators[modelId]
 	if !exists {
+
+		fmt.Println("Doing a validation multicast")
 
 		// Create new validator object
 		var valid Validator
@@ -459,9 +544,8 @@ func startValidation(modelId string) {
 
 		fmt.Println("Setup Validation multicast")	
 
-	} else {
-		fmt.Println("Validation already in progress")
-	}
+	} 
+
 }
 
 func isClientValidating(modelId string, node string) bool {

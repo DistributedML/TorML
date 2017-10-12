@@ -10,7 +10,7 @@ import pdb
 
 if __name__ == "__main__":
 
-    dataset = "magic"
+    dataset = "magic1"
     data = utils.load_dataset(dataset)
 
     print("Download complete.")

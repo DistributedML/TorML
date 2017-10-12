@@ -11,10 +11,12 @@ X = 0
 y = 0
 iteration = 1
 alpha = 1e-2
-epsilon = 10
+epsilon = 1
 d = 0
 hist_grad = 0
-scale = True
+
+scale = False
+diffpriv = False
 
 def init(dataset):
 
@@ -104,9 +106,12 @@ def privateFun(theta, ww, batch_size=0):
     #delta = -alpha * ada_grad
 
     d1, _ = samples.shape
-    Z = samples[np.random.randint(0, d1)]
 
-    delta = -alpha * (g + (1/batch_size) * Z)
+    if diffpriv:
+        Z = samples[np.random.randint(0, d1)]
+        delta = -alpha * (g + (1/batch_size) * Z)
+    else:
+        delta = -alpha * g
 
     # Weird way to get NON top k values
     if theta < 1:

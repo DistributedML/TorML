@@ -6,7 +6,7 @@ import pdb
 data = utils.load_dataset("magictest")
 Xtest, ytest = data['X'], data['y']
 
-data = utils.load_dataset("magic1")
+data = utils.load_dataset("magictrain")
 XBin, yBin = data['X'], data['y']
 
 
