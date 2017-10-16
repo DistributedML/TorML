@@ -63,22 +63,27 @@ def load_dataset(dataset_name):
                 "Xvalid": Xvalid,
                 "yvalid": yvalid}
 
-    elif dataset_name == "susy":
+    elif dataset_name == "credit":
 
-        susy = pd.read_csv("../data/SUSY.csv", header=None).as_matrix()
-        nn, dd = susy.shape
+        df = pd.read_csv(os.path.join('../', "data", 'creditcard.csv'))
+        nn, dd = df.shape
 
-        idx = np.random.permutation(nn)
+        # Need to remove the first column and first row
+        credit = df.ix[1:nn, 1:dd].as_matrix()
+        nn, dd = credit.shape
+
+        datay = credit[:, dd - 1].astype(int)
+        datay[np.where(datay == 0)] = -1
+
+        idx = np.arange(nn)
+        data = credit[idx, :].astype(float)
         
-        npsusy = susy[idx,:]
+        split = int(nn * 0.70)
+        X = data[0:split, :]
+        y = datay[0:split]
 
-        X = npsusy[0:4000000,1:dd]
-        y = npsusy[0:4000000,0]
-        y[np.where(y == 0)] = -1
-
-        Xvalid = npsusy[4000000:nn,1:dd]
-        yvalid = npsusy[4000000:nn,0]
-        yvalid[np.where(yvalid == 0)] = -1
+        Xvalid = data[split:nn - 1, :]
+        yvalid = datay[split:nn - 1]
 
         X, mu, sigma = standardize_cols(X)
         Xvalid, _, _ = standardize_cols(Xvalid, mu, sigma)
@@ -86,8 +91,8 @@ def load_dataset(dataset_name):
         X = np.hstack([np.ones((X.shape[0], 1)), X])
         Xvalid = np.hstack([np.ones((Xvalid.shape[0], 1)), Xvalid])
 
-        X = normalize_rows(X)
-        Xvalid = normalize_rows(Xvalid)
+        #X = normalize_rows(X)
+        #Xvalid = normalize_rows(Xvalid)
 
         return {"X": X, "y": y,
                 "Xvalid": Xvalid,
@@ -96,7 +101,7 @@ def load_dataset(dataset_name):
     elif dataset_name == "slices":
 
         slices = pd.read_csv(os.path.join(
-            '../ML', "data", 'slice_localization_data.csv'))
+            '../', "data", 'slice_localization_data.csv'))
         n, d = slices.shape
 
         npslices = slices.ix[np.random.permutation(n), :].as_matrix()
@@ -113,9 +118,6 @@ def load_dataset(dataset_name):
 
         X = np.hstack([np.ones((X.shape[0], 1)), X])
         Xvalid = np.hstack([np.ones((Xvalid.shape[0], 1)), Xvalid])
-
-        X = normalize_rows(X)
-        Xvalid = normalize_rows(Xvalid)
 
         return {"X": X, "y": y,
                 "Xvalid": Xvalid,
@@ -157,27 +159,33 @@ def load_dataset(dataset_name):
                 "Xvalid": Xvalid,
                 "yvalid": yvalid}
 
-    elif dataset_name == "sns":
+    elif dataset_name == "wdbc":
 
-        sns = pd.read_csv(os.path.join('..', 'data', 'sns.txt'), sep="\t")
-        nn, dd = sns.shape
+        wdbc = pd.read_csv(os.path.join('../', "data", 'wdbc.data'))
+        nn, dd = wdbc.shape
 
-        npsns = sns.ix[np.random.permutation(nn), :].as_matrix().astype(int)
+        # First column is ID. Second one is diagnosis 'M' or 'B'
+        y = wdbc.ix[:, 1].as_matrix()
+        y[np.where(y == 'M')] = 1
+        y[np.where(y == 'B')] = -1
+
+        npbc = wdbc.ix[np.random.permutation(
+            nn), :].as_matrix().astype(float)
         split = int(nn * 0.70)
 
-        X = npsns[0:split - 1, 0:dd - 2]
-        y = ((npsns[0:split - 1, dd - 1] - 1.5) * 2).astype(int)
-        Xvalid = npsns[split:nn - 1, 0:dd - 2]
-        yvalid = ((npsns[split:nn - 1, dd - 1] - 1.5) * 2).astype(int)
+        data = npbc[:, 2:dd]
+
+        X = data[0:split, :]
+        y = npbc[0:split, 1]
+
+        Xvalid = data[split:nn]
+        yvalid = npbc[split:nn, 1]
 
         X, mu, sigma = standardize_cols(X)
         Xvalid, _, _ = standardize_cols(Xvalid, mu, sigma)
 
         X = np.hstack([np.ones((X.shape[0], 1)), X])
         Xvalid = np.hstack([np.ones((Xvalid.shape[0], 1)), Xvalid])
-
-        X = normalize_rows(X)
-        Xvalid = normalize_rows(Xvalid)
 
         return {"X": X, "y": y,
                 "Xvalid": Xvalid,
