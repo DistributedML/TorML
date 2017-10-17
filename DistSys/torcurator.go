@@ -86,7 +86,7 @@ func sendCurateMessage(logger *govec.GoLog, torDialer proxy.Dialer) int {
   var model ModelInfo
   model.ModelId = modelName
   model.Key = ""
-  model.NumFeatures = 21
+  model.NumFeatures = 25
   model.MinClients = 5
 
   var msg MessageData

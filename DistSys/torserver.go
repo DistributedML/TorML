@@ -37,6 +37,7 @@ type ClientState struct {
 	IsComputingLocal 	bool
 	Weights 			[]float64
 	OutlierScore		float64
+	Work 				[][]float64
 }
 
 // An active model: list of participants and weights
@@ -66,8 +67,8 @@ var (
 	myModels 			map[string]Model
 	myValidators	 	map[string]Validator
 
-	MULTICAST_RATE		float64 = 0.95
-	THRESHOLD			float64 = 0.000001
+	MULTICAST_RATE		float64 = 0.8
+	THRESHOLD			float64 = 0.005
 
 	// Test Module for python
 	testModule  *python.PyObject
@@ -123,6 +124,31 @@ func handler(w http.ResponseWriter, r *http.Request) {
     			st := strings.Fields(strings.Trim(fmt.Sprint(modelState.Weights), "[]"))
     			st = append(st, node)
     			writer.Write(st)
+    		}       
+    	}
+
+    	fmt.Fprintf(w, "Model flushed.")
+
+    } else if req == "workflush" {
+
+    	for _, model := range myModels {
+
+    		for node, modelState := range model.Clients {
+    			
+    			file, err := os.Create("work_" + node + ".csv")
+    			checkError(err)
+    			defer file.Close()
+
+    			writer := csv.NewWriter(file)
+    			defer writer.Flush()
+
+    			for _, update := range modelState.Work {
+
+	    			st := strings.Fields(strings.Trim(fmt.Sprint(update), "[]"))
+	    			writer.Write(st)
+
+    			}
+
     		}       
     	}
 
@@ -400,7 +426,9 @@ func processJoin(node string, model ModelInfo) bool {
 			if strings.HasSuffix(hashString, "0000") {
 
 				// Add node
-				theModel.Clients[node] = ClientState{0, 0, false, newRandomModel(model.NumFeatures), 0}
+				theModel.Clients[node] = 
+					ClientState{0, 0, false, 
+						newRandomModel(model.NumFeatures), 0, make([][]float64, 0)}
 				fmt.Printf("Joined %s in model %s \n", node, model.ModelId)
 				
 				// Write the solution
@@ -447,7 +475,9 @@ func gradientUpdate(nodeId string, modelId string, deltas []float64) bool {
 
 				if validator.NumResponses >= len(validator.ClientResponses) {
 					fmt.Println("READY FOR VALIDATION MAGIC")
-					runValidation(modelId)
+					//runValidation(modelId)
+					delete(myValidators, modelId) 
+					numValidations++
 				}
 
 				// Revert the client state
@@ -460,14 +490,22 @@ func gradientUpdate(nodeId string, modelId string, deltas []float64) bool {
 				// Update the global model
 				for j := 0; j < len(deltas); j++ {
 					theModel.GlobalWeights[j] += deltas[j]
+					//clientState.Weights[j] += deltas[j]
 				}
 				
 				clientState.NumIterations++
+
+				/*if clientState.NumIterations % 10 == 0 {
+					clientState.Work = append(clientState.Work, deltas)
+				}*/
+
 				theModel.Clients[nodeId] = clientState
 				myModels[modelId] = theModel
 				fmt.Printf("Grad update from %s on %s \n", nodeId, modelId)
 							
 			}
+		} else {
+			fmt.Printf("Client %s is not in this model.\n")
 		}
 	}
 
@@ -503,18 +541,29 @@ func runValidation(modelId string) {
 		theModel.Clients[node1] = clientState
 
 		// save the current rolling
-		rollingAvg := rollingSum / float64(clientState.NumValidations)
+		rollingAvg := rollingSum / float64(clientState.NumValidations + 1)
 		fmt.Printf("Average Distance for %s: %.9f \n", node1, rollingAvg)
 
 		if rollingAvg > THRESHOLD {
 			fmt.Printf("node %s has average %7f over THRESHOLD %7f. KICKED! \n", 
 				node1, rollingAvg, THRESHOLD)
+			kickoutNode(modelId, node1)
 		}
 
 	}
 
-	delete(myValidators, modelId) 
-	numValidations++
+}
+
+func kickoutNode(modelId string, nodeId string) {
+
+	// Long and annoying atomic delete
+	theModel := myModels[modelId]
+	clientStates := theModel.Clients
+	delete(clientStates, nodeId)
+	theModel.Clients = clientStates
+	myModels[modelId] = theModel
+
+	fmt.Printf("Removed node %s from model\n", nodeId)
 
 }
 
