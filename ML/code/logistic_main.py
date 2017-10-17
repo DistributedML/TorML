@@ -10,7 +10,7 @@ import pdb
 
 if __name__ == "__main__":
 
-    dataset = "credit1"
+    dataset = "credittrain"
     data = utils.load_dataset(dataset)
 
     print("Download complete.")
