@@ -13,6 +13,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	"github.com/DistributedClocks/GoVector/govec"
 	"github.com/sbinet/go-python"
@@ -65,6 +66,8 @@ type Validator struct {
 
 var (
 	
+	mutex 				*sync.Mutex
+
 	myPorts				map[int]bool
 	myModels 			map[string]Model
 	myValidators	 	map[string]Validator
@@ -198,6 +201,8 @@ func main() {
 
 	pyInit()
 	
+	mutex = &sync.Mutex{}
+
 	myPorts = make(map[int]bool)
 	myModels = make(map[string]Model)
 	myValidators = make(map[string]Validator)
@@ -231,8 +236,6 @@ func runRouter(address string) {
 
 	buf := make([]byte, 2048)
 	outBuf := make([]byte, 2048)
-	myModels = make(map[string]Model)
-	myValidators = make(map[string]Validator)
 
 	fmt.Printf("Listening for TCP....\n")
 
@@ -337,6 +340,8 @@ func gradientWorker(nodeId string,
 			}
 
 			gradientUpdate(nodeId, modelId, inData.Deltas)
+
+			mutex.Lock()
 			clientState := myModels[modelId].Clients[nodeId]
 
 			if isClientValidating(modelId, nodeId) {
@@ -348,6 +353,7 @@ func gradientWorker(nodeId string,
 			}
 
 			myModels[modelId].Clients[nodeId] = clientState
+			mutex.Unlock()
 		
 		}
 
@@ -398,7 +404,9 @@ func startModel(modelId string, numFeatures int, minClients int) bool {
 	newModel.GlobalWeights = newRandomModel(numFeatures)
 	newModel.MinClients = minClients
 	
+	mutex.Lock()
 	myModels[modelId] = newModel
+	mutex.Unlock()
 	fmt.Printf("Added a new model: %s\n", modelId)
 
 	return true
@@ -409,7 +417,7 @@ func startModel(modelId string, numFeatures int, minClients int) bool {
 */
 func makePuzzle(modelId string) string {
 
-	theModel, exists := myModels[modelId]
+	_, exists := myModels[modelId]
 	if exists {
 
 		// Generate a problem based on the current time
@@ -417,8 +425,12 @@ func makePuzzle(modelId string) string {
 		timeHash.Write([]byte(time.Now().String()))
 
 		puzzle := hex.EncodeToString(timeHash.Sum(nil))
+
+		mutex.Lock()
+		theModel := myModels[modelId]
 		theModel.Puzzles[puzzle] = "unsolved"
 		myModels[modelId] = theModel
+		mutex.Unlock()
 
 		fmt.Printf("Made a new puzzle for model %s\n", modelId)
 		return puzzle
@@ -437,24 +449,26 @@ func processJoin(node string, modelId string, givenKey string, numFeatures int) 
 	fmt.Println("Got attempted puzzle solution")
 
 	// check if model exists
-	theModel, exists := myModels[modelId]
+	_, exists := myModels[modelId]
 	if !exists {
 		fmt.Printf("Rejected a fake join for model: %s\n", modelId)
 		return false
 	}
 
+	mutex.Lock()
+	theModel := myModels[modelId]
 	if numFeatures != theModel.NumFeatures {
 		fmt.Printf("Rejected an incorrect numFeatures for model: %s\n", modelId)
+		mutex.Unlock()
 		return false
 	}
 
 	_, exists = theModel.Clients[node]
 	if exists {
 		fmt.Printf("Node %s is already joined in model: %s \n", node, modelId)
+		mutex.Unlock()
 		return false
 	}
-
-	fmt.Println(theModel.Puzzles)
 
 	// Verify the solution
 	for lock, key := range theModel.Puzzles {
@@ -478,6 +492,8 @@ func processJoin(node string, modelId string, givenKey string, numFeatures int) 
 				// Write the solution
 				theModel.Puzzles[lock] = givenKey
 				myModels[modelId] = theModel
+				mutex.Unlock()
+
 				return true
 
 			} else {
@@ -487,6 +503,7 @@ func processJoin(node string, modelId string, givenKey string, numFeatures int) 
 		} 
 	}
 
+	mutex.Unlock()
 	return false
 }
 
@@ -500,6 +517,7 @@ func gradientUpdate(nodeId string, modelId string, deltas []float64) bool {
 		// Add in the deltas
 		if exists { 
 
+			mutex.Lock()
 			theModel := myModels[modelId]
 			clientState := theModel.Clients[nodeId]
 
@@ -550,6 +568,10 @@ func gradientUpdate(nodeId string, modelId string, deltas []float64) bool {
 				fmt.Printf("Grad update from %s on %s \n", nodeId, modelId)
 							
 			}
+
+			// End of gradient update
+			mutex.Unlock()
+
 		} else {
 			fmt.Printf("Client %s is not in this model.\n")
 		}
@@ -566,6 +588,7 @@ func runValidation(modelId string) {
 		scores[node] = mat64.NewDense(myModels[modelId].NumFeatures, 1, model)
 	}
 
+	mutex.Lock()
 	theModel := myModels[modelId]
 	for node1, vector1 := range scores {
 		
@@ -598,16 +621,21 @@ func runValidation(modelId string) {
 
 	}
 
+	myModels[modelId] = theModel
+	mutex.Unlock()
+
 }
 
 func kickoutNode(modelId string, nodeId string) {
 
 	// Long and annoying atomic delete
+	mutex.Lock()
 	theModel := myModels[modelId]
 	clientStates := theModel.Clients
 	delete(clientStates, nodeId)
 	theModel.Clients = clientStates
 	myModels[modelId] = theModel
+	mutex.Unlock()
 
 	fmt.Printf("Removed node %s from model\n", nodeId)
 
@@ -647,12 +675,14 @@ func getFreeAddress() (string, int) {
 
 	var buffer bytes.Buffer
 
+	mutex.Lock()
 	for port := range myPorts {
 		
 		if !myPorts[port] {
 
 			// Mark port as taken
 			myPorts[port] = true
+			mutex.Unlock()
 
 			// Construct the address string
 			buffer.WriteString("127.0.0.1:")
@@ -661,6 +691,7 @@ func getFreeAddress() (string, int) {
 		}
 	}
 	
+	mutex.Unlock()
 	return "", 0
 }
 
