@@ -20,15 +20,10 @@ var (
 )
 
 type MessageData struct {
-  Type          string
+  Type      string
   SourceNode    string
-  Model         ModelInfo
-  Deltas        []float64
-}
-
-type ModelInfo struct {
   ModelId       string
-  Key           string
+  Key       string
   NumFeatures   int
   MinClients    int
 }
@@ -83,17 +78,13 @@ func sendCurateMessage(logger *govec.GoLog, torDialer proxy.Dialer) int {
 
   fmt.Println("TOR Dial Success!")
 
-  var model ModelInfo
-  model.ModelId = modelName
-  model.Key = ""
-  model.NumFeatures = 25
-  model.MinClients = 5
-
   var msg MessageData
   msg.Type = "curator"
   msg.SourceNode = name
-  msg.Model = model
-  msg.Deltas = make([]float64, model.NumFeatures)
+  msg.ModelId = modelName
+  msg.Key = ""
+  msg.NumFeatures = 25
+  msg.MinClients = 5
 
   fmt.Println(msg)
   outBuf := logger.PrepareSend("Sending packet to torserver", msg)

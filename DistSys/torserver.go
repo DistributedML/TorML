@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/csv"
 	"encoding/hex"
@@ -10,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 	"github.com/DistributedClocks/GoVector/govec"
@@ -20,15 +22,17 @@ import (
 type MessageData struct {
 	Type 		  string
 	SourceNode    string
-	Model         ModelInfo
-	Deltas 		  []float64
+	ModelId       string
+	Key 		  string
+	NumFeatures   int
+	MinClients    int
 }
 
-type ModelInfo struct {
-	ModelId	 		string
-	Key				string
-	NumFeatures 	int
-	MinClients    	int
+// Schema for data used in gradient updates
+type GradientData struct {
+	ModelId 	  string
+	Key			  string
+	Deltas 		  []float64
 }
 
 type ClientState struct {
@@ -60,10 +64,8 @@ type Validator struct {
 }
 
 var (
-	maxnode     		int = 0
-	numFeatures			int = 0
-	numValidations		int = 0
-	registeredNodes		map[string]string
+	
+	myPorts				map[int]bool
 	myModels 			map[string]Model
 	myValidators	 	map[string]Validator
 
@@ -196,6 +198,15 @@ func main() {
 
 	pyInit()
 	
+	myPorts = make(map[int]bool)
+	myModels = make(map[string]Model)
+	myValidators = make(map[string]Validator)
+
+	// Make ports 6000 to 6010 available
+	for i := 6000; i <= 6010; i++ {
+		myPorts[i] = false
+	}
+
 	// setup the handler for web requests through the browser
 	go httpHandler()
 
@@ -219,7 +230,7 @@ func runRouter(address string) {
 	checkError(err)
 
 	buf := make([]byte, 2048)
-	registeredNodes = make(map[string]string)
+	outBuf := make([]byte, 2048)
 	myModels = make(map[string]Model)
 	myValidators = make(map[string]Validator)
 
@@ -236,58 +247,27 @@ func runRouter(address string) {
 		var inData MessageData
 		Logger.UnpackReceive("Received Message From Client", buf[0:], &inData)
 
-		outBuf := processMsg(inData, Logger)
+		outBuf = processControlMsg(inData, Logger)
 	  	conn.Write(outBuf)
 
 	}
 }
 
-func processMsg(inData MessageData, Logger *govec.GoLog) []byte {
+func processControlMsg(inData MessageData, Logger *govec.GoLog) []byte {
 
 	outBuf := make([]byte, 2048)
 	var ok bool
 
 	switch inData.Type {
 
-		// Client is sending a gradient update. Apply it and return myWeights
-		case "grad":
-
-			modelId := inData.Model.ModelId
-
-			if len(myModels[modelId].Clients) < myModels[modelId].MinClients {
-				outBuf = Logger.PrepareSend("Replying", make([]float64, 0))
-			} else {
-
-				if rand.Float64() > MULTICAST_RATE {
-					startValidation(modelId)
-				}
-
-				ok = gradientUpdate(inData.SourceNode, modelId, inData.Deltas)
-
-				clientState := myModels[modelId].Clients[inData.SourceNode]
-
-				// generates a float from 0 to 1
-				if isClientValidating(modelId, inData.SourceNode) {
-					outBuf = Logger.PrepareSend("Replying", clientState.Weights)
-					clientState.IsComputingLocal = true
-				} else {
-					outBuf = Logger.PrepareSend("Replying", myModels[inData.Model.ModelId].GlobalWeights)
-					clientState.IsComputingLocal = false
-				}
-
-				myModels[inData.Model.ModelId].Clients[inData.SourceNode] = clientState
-			}
-
 		// Add new nodes
 		case "join":
-			puzzle := makePuzzle(inData.Model.ModelId)
+			puzzle := makePuzzle(inData.ModelId)
 			outBuf = Logger.PrepareSend("Sending Puzzle", puzzle)
 
 		// curate a new model
 		case "curator":
-			ok = startModel(inData.Model.ModelId, 
-				inData.Model.NumFeatures,
-				inData.Model.MinClients)
+			ok = startModel(inData.ModelId, inData.NumFeatures, inData.MinClients)
 			if ok {
 		  		outBuf = Logger.PrepareSend("Replying", 1)
 			} else {
@@ -295,9 +275,11 @@ func processMsg(inData MessageData, Logger *govec.GoLog) []byte {
 			}				
 
 		case "solve":
-			ok = processJoin(inData.SourceNode, inData.Model)
+			ok = processJoin(inData.SourceNode, inData.ModelId, inData.Key, inData.NumFeatures)
 			if ok {
-		  		outBuf = Logger.PrepareSend("Replying", 1)
+				address, port := getFreeAddress()
+				go gradientWorker(inData.SourceNode, address, Logger)
+		  		outBuf = Logger.PrepareSend("Replying", port)
 			} else {
 				outBuf = Logger.PrepareSend("Replying", 0)
 			}
@@ -314,6 +296,64 @@ func processMsg(inData MessageData, Logger *govec.GoLog) []byte {
 	}
 
 	return outBuf
+
+}
+
+func gradientWorker(nodeId string, 
+					address string, 
+					Logger *govec.GoLog) {
+
+	// Convert address string to net.Address
+	myaddr, err := net.ResolveTCPAddr("tcp", address)
+	checkError(err)
+
+	ln, err := net.ListenTCP("tcp", myaddr)
+	checkError(err)
+
+	buf := make([]byte, 2048)
+	outBuf := make([]byte, 2048)
+	fmt.Printf("Listening for TCP....\n")
+
+	for {
+
+		conn, err := ln.Accept()
+		checkError(err)
+
+		// Get the message from client
+		conn.Read(buf)
+
+		var inData GradientData
+		Logger.UnpackReceive("Received Message From Client", buf[0:], &inData)
+
+		modelId := inData.ModelId
+
+		// Not ready for gradients yet
+		if len(myModels[modelId].Clients) < myModels[modelId].MinClients {
+			outBuf = Logger.PrepareSend("Replying", make([]float64, 0))
+		} else {
+
+			if rand.Float64() > MULTICAST_RATE {
+				startValidation(modelId)
+			}
+
+			gradientUpdate(nodeId, modelId, inData.Deltas)
+			clientState := myModels[modelId].Clients[nodeId]
+
+			if isClientValidating(modelId, nodeId) {
+				outBuf = Logger.PrepareSend("Replying", clientState.Weights)
+				clientState.IsComputingLocal = true
+			} else {
+				outBuf = Logger.PrepareSend("Replying", myModels[modelId].GlobalWeights)
+				clientState.IsComputingLocal = false
+			}
+
+			myModels[modelId].Clients[nodeId] = clientState
+		
+		}
+
+	  	conn.Write(outBuf)
+
+	}
 
 }
 
@@ -391,28 +431,32 @@ func makePuzzle(modelId string) string {
 
 }
 
-func processJoin(node string, model ModelInfo) bool {
+// numFeature is just bootleg schema validation 
+func processJoin(node string, modelId string, givenKey string, numFeatures int) bool {
+
+	fmt.Println("Got attempted puzzle solution")
 
 	// check if model exists
-	theModel, exists := myModels[model.ModelId]
+	theModel, exists := myModels[modelId]
 	if !exists {
-		fmt.Printf("Rejected a fake join for model: %s\n", model.ModelId)
+		fmt.Printf("Rejected a fake join for model: %s\n", modelId)
 		return false
 	}
 
-	if model.NumFeatures != theModel.NumFeatures {
-		fmt.Printf("Rejected an incorrect numFeatures for model: %s\n", model.ModelId)
+	if numFeatures != theModel.NumFeatures {
+		fmt.Printf("Rejected an incorrect numFeatures for model: %s\n", modelId)
 		return false
 	}
 
 	_, exists = theModel.Clients[node]
 	if exists {
-		fmt.Printf("Node %s is already joined in model: %s \n", node, model.ModelId)
+		fmt.Printf("Node %s is already joined in model: %s \n", node, modelId)
 		return false
 	}
 
+	fmt.Println(theModel.Puzzles)
+
 	// Verify the solution
-	
 	for lock, key := range theModel.Puzzles {
 
 		hash := sha256.New()
@@ -420,7 +464,7 @@ func processJoin(node string, model ModelInfo) bool {
 		if key == "unsolved" {
 
 			hash.Write([]byte(lock))
-			hash.Write([]byte(model.Key))
+			hash.Write([]byte(givenKey))
 			hashString := hex.EncodeToString(hash.Sum(nil))
 			
 			if strings.HasSuffix(hashString, "0000") {
@@ -428,16 +472,19 @@ func processJoin(node string, model ModelInfo) bool {
 				// Add node
 				theModel.Clients[node] = 
 					ClientState{0, 0, false, 
-						newRandomModel(model.NumFeatures), 0, make([][]float64, 0)}
-				fmt.Printf("Joined %s in model %s \n", node, model.ModelId)
+						newRandomModel(numFeatures), 0, make([][]float64, 0)}
+				fmt.Printf("Joined %s in model %s \n", node, modelId)
 				
 				// Write the solution
-				theModel.Puzzles[lock] = key
-				myModels[model.ModelId] = theModel
+				theModel.Puzzles[lock] = givenKey
+				myModels[modelId] = theModel
 				return true
 
+			} else {
+				fmt.Printf("Solution is not right: %s\n", givenKey)
+				fmt.Printf("Solution answer: %s\n", hashString)
 			}
-		}
+		} 
 	}
 
 	return false
@@ -477,7 +524,6 @@ func gradientUpdate(nodeId string, modelId string, deltas []float64) bool {
 					fmt.Println("READY FOR VALIDATION MAGIC")
 					//runValidation(modelId)
 					delete(myValidators, modelId) 
-					numValidations++
 				}
 
 				// Revert the client state
@@ -595,6 +641,27 @@ func startValidation(modelId string) {
 
 	} 
 
+}
+
+func getFreeAddress() (string, int) {
+
+	var buffer bytes.Buffer
+
+	for port := range myPorts {
+		
+		if !myPorts[port] {
+
+			// Mark port as taken
+			myPorts[port] = true
+
+			// Construct the address string
+			buffer.WriteString("127.0.0.1:")
+			buffer.WriteString(strconv.Itoa(port))
+			return buffer.String(), port
+		}
+	}
+	
+	return "", 0
 }
 
 func isClientValidating(modelId string, node string) bool {

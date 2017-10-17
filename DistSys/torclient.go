@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/binary"
@@ -10,6 +11,7 @@ import (
 	"net"
 	"os"
 	"time"
+	"strconv"
 	"strings"
 	"golang.org/x/net/proxy"
 	"github.com/DistributedClocks/GoVector/govec"
@@ -19,35 +21,46 @@ import (
 /*
 	An attempt at Tor via TCP. 
 */
-var LOCAL_HOST string = "127.0.0.1:5005"
-var ONION_HOST string = "4255ru2izmph3efw.onion:5005"
-var TOR_PROXY string = "127.0.0.1:9150"
+var LOCAL_HOST 		string = "127.0.0.1:"
+var ONION_HOST 		string = "4255ru2izmph3efw.onion:"
+var CONTROL_PORT 	int    = 5005
+var TOR_PROXY 		string = "127.0.0.1:9150"
 
 type MessageData struct {
-	Type 		  string
+	Type   		  string
 	SourceNode    string
-	Model         ModelInfo
+	ModelId       string
+	Key           string
+	NumFeatures   int
+	MinClients    int
+}
+
+// Schema for data used in gradient updates
+type GradientData struct {
+	ModelId 	  string
+	Key			  string
 	Deltas 		  []float64
 }
 
-type ModelInfo struct {
-	ModelId	 		string
-	Key				string
-	NumFeatures 	int
-	MinClients    	int
-}
-
 var (
+	
 	name 			string
 	modelName  		string
 	datasetName 	string
-	isLocal 		bool
-	model 			ModelInfo
-	logModule      	*python.PyObject
-	logInitFunc     *python.PyObject
-	logPrivFunc     *python.PyObject
-	numFeatures     *python.PyObject
+	numFeatures     int
+	minClients      int
+	isLocal			bool
+	puzzleKey		string
 	pulledGradient  []float64
+	torHost			string
+	torAddress		string
+
+	pyLogModule       *python.PyObject
+	pyLogInitFunc     *python.PyObject
+	pyLogPrivFunc     *python.PyObject
+	pyNumFeatures     *python.PyObject
+	
+
 )
 
 func init() {
@@ -63,17 +76,16 @@ func pyInit(datasetName string) {
 	python.PyList_Insert(sysPath, 0, python.PyString_FromString("./"))
 	python.PyList_Insert(sysPath, 0, python.PyString_FromString("../ML/code"))
 
-	logModule = python.PyImport_ImportModule("logistic_model")
-	logInitFunc = logModule.GetAttrString("init")
-	logPrivFunc = logModule.GetAttrString("privateFun")
-	numFeatures = logInitFunc.CallFunction(python.PyString_FromString(datasetName))
+	pyLogModule = python.PyImport_ImportModule("logistic_model")
+	pyLogInitFunc = pyLogModule.GetAttrString("init")
+	pyLogPrivFunc = pyLogModule.GetAttrString("privateFun")
+	pyNumFeatures = pyLogInitFunc.CallFunction(python.PyString_FromString(datasetName))
 
-  	model.ModelId = modelName
-  	model.NumFeatures = python.PyInt_AsLong(numFeatures)
-  	model.MinClients = 5
-  	pulledGradient = make([]float64, model.NumFeatures)
+  	numFeatures = python.PyInt_AsLong(pyNumFeatures)
+  	minClients = 5
+  	pulledGradient = make([]float64, numFeatures)
 
-  	fmt.Printf("Sucessfully pulled dataset. Features: %d\n", model.NumFeatures)
+  	fmt.Printf("Sucessfully pulled dataset. Features: %d\n", numFeatures)
 
 }
 
@@ -111,7 +123,7 @@ func heartbeat(logger *govec.GoLog, torDialer proxy.Dialer) {
 
 		time.Sleep(30 * time.Second)		
 
-		conn, err := getServerConnection(torDialer)
+		conn, err := getServerConnection(torDialer, false)
 		if err != nil {
 			fmt.Println("Got a Dial failure, retrying...")
 			continue
@@ -120,7 +132,10 @@ func heartbeat(logger *govec.GoLog, torDialer proxy.Dialer) {
 		var msg MessageData
 		msg.Type = "beat"
 		msg.SourceNode = name
-		msg.Deltas = nil
+		msg.ModelId = modelName
+		msg.Key = puzzleKey
+		msg.NumFeatures = numFeatures
+		msg.MinClients = minClients
 
 		outBuf := logger.PrepareSend("Sending packet to torserver", msg)
 		
@@ -159,6 +174,7 @@ func parseArgs() {
 	name = inputargs[0]
 	modelName = inputargs[1]
 	datasetName = inputargs[2]
+	torHost = ONION_HOST
 
 	fmt.Printf("Name: %s\n", name)
 	fmt.Printf("Study: %s\n", modelName)
@@ -167,6 +183,7 @@ func parseArgs() {
 	if len(inputargs) > 3 {
 		fmt.Println("Running locally.")
 		isLocal = true
+		torHost = LOCAL_HOST
 	}
 
 	fmt.Println("Done parsing args.")
@@ -193,21 +210,20 @@ func sendGradMessage(logger *govec.GoLog,
 	completed := false
 
 	// prevents the screen from overflowing and freezing
-	time.Sleep(10 * time.Millisecond)		
+	time.Sleep(100 * time.Millisecond)		
 
 	for !completed {
 
-		conn, err := getServerConnection(torDialer)
+		conn, err := getServerConnection(torDialer, true)
 		if err != nil {
 			fmt.Println("Got a Dial failure, retrying...")
 			continue
 		}
 
-		var msg MessageData
+		var msg GradientData
 		if !bootstrapping {
-			msg.Type = "grad"
-			msg.SourceNode = name
-			msg.Model = model
+			msg.Key = puzzleKey
+			msg.ModelId = modelName
 			msg.Deltas, err = oneGradientStep(globalW)
 
 			if err != nil {
@@ -215,11 +231,11 @@ func sendGradMessage(logger *govec.GoLog,
 				conn.Close()
 				continue
 			}
+
 		} else {
-			msg.Type = "grad"
-			msg.SourceNode = name
-			msg.Model = model
-			msg.Deltas = make([]float64, model.NumFeatures)
+			msg.Key = puzzleKey
+			msg.ModelId = modelName
+			msg.Deltas = make([]float64, numFeatures)
 			bootstrapping = false
 		}
 
@@ -253,16 +269,23 @@ func sendGradMessage(logger *govec.GoLog,
 		}
 
 	}
+
 	return 1
 }
 
-func getServerConnection(torDialer proxy.Dialer) (net.Conn, error) {
+func getServerConnection(torDialer proxy.Dialer, isGradient bool) (net.Conn, error) {
 
 	var conn net.Conn
 	var err error
 
 	if torDialer != nil {
-		conn, err = torDialer.Dial("tcp", ONION_HOST)
+
+		if isGradient {
+			conn, err = torDialer.Dial("tcp", torAddress)
+		} else {
+			conn, err = torDialer.Dial("tcp", constructAddress(ONION_HOST, CONTROL_PORT))
+		}
+	
 	} else {
 		conn, err = net.Dial("tcp", LOCAL_HOST)
 	}
@@ -273,7 +296,7 @@ func getServerConnection(torDialer proxy.Dialer) (net.Conn, error) {
 
 func sendJoinMessage(logger *govec.GoLog, torDialer proxy.Dialer) int {
 
-	conn, err := getServerConnection(torDialer)
+	conn, err := getServerConnection(torDialer, false)
 	checkError(err)
 
 	fmt.Println("TOR Dial Success!")
@@ -281,8 +304,10 @@ func sendJoinMessage(logger *govec.GoLog, torDialer proxy.Dialer) int {
 	var msg MessageData
     msg.Type = "join"
     msg.SourceNode = name
-    msg.Model = model
-    msg.Deltas = make([]float64, model.NumFeatures)
+    msg.ModelId = modelName
+    msg.Key = ""
+    msg.NumFeatures = numFeatures
+    msg.MinClients = minClients
 
     outBuf := logger.PrepareSend("Sending packet to torserver", msg)
     	
@@ -321,12 +346,13 @@ func sendJoinMessage(logger *govec.GoLog, torDialer proxy.Dialer) int {
 
 	}
 
-	conn, err = getServerConnection(torDialer)
+	conn, err = getServerConnection(torDialer, false)
 	checkError(err)
 
-	model.Key = solution  
 	msg.Type = "solve"
-    msg.Model = model
+	msg.Key = solution  
+
+	fmt.Printf("Sending solution: %s\n", solution)
 
 	outBuf = logger.PrepareSend("Sending puzzle solution", msg)
 	_, errWrite = conn.Write(outBuf)
@@ -339,9 +365,19 @@ func sendJoinMessage(logger *govec.GoLog, torDialer proxy.Dialer) int {
 	var reply int
 	logger.UnpackReceive("Received Message from server", inBuf[0:n], &reply)
 
-	if reply == 1 {
+	// The server replies with the port
+	if reply != 0 {
 		fmt.Println("Got ACK for puzzle")
-		model.Key = solution
+		puzzleKey = solution
+
+		if isLocal {
+			torAddress = constructAddress(LOCAL_HOST, reply)
+		} else {
+			torAddress = constructAddress(ONION_HOST, reply)
+		}
+
+		fmt.Printf("Set up connection address %s\n", torAddress)
+
 	} else {
 		fmt.Println("My puzzle solution failed.")
 	}
@@ -361,7 +397,7 @@ func oneGradientStep(globalW []float64) ([]float64, error) {
 	}
 
 	// Either use full GD or SGD here
-	result := logPrivFunc.CallFunction(python.PyInt_FromLong(1), argArray,
+	result := pyLogPrivFunc.CallFunction(python.PyInt_FromLong(1), argArray,
 		python.PyInt_FromLong(10))
 	
 	// Convert the resulting array to a go byte array
@@ -379,7 +415,14 @@ func oneGradientStep(globalW []float64) ([]float64, error) {
 	}
 	
 	return goFloatArray, nil
+}
 
+func constructAddress(host string, port int) string {
+
+	var buffer bytes.Buffer
+	buffer.WriteString(host)
+	buffer.WriteString(strconv.Itoa(port))
+	return buffer.String()
 }
 
 // Error checking function
