@@ -335,8 +335,10 @@ func gradientWorker(nodeId string,
 			outBuf = Logger.PrepareSend("Replying", make([]float64, 0))
 		} else {
 
+			setUpValid := false
+
 			if rand.Float64() > MULTICAST_RATE {
-				startValidation(modelId)
+				setUpValid = true
 			}
 
 			gradientUpdate(nodeId, modelId, inData.Deltas)
@@ -344,9 +346,10 @@ func gradientWorker(nodeId string,
 			mutex.Lock()
 			clientState := myModels[modelId].Clients[nodeId]
 
-			if isClientValidating(modelId, nodeId) {
+			if setUpValid {
 				outBuf = Logger.PrepareSend("Replying", clientState.Weights)
 				clientState.IsComputingLocal = true
+				fmt.Printf("Setup Validation for %s\n", nodeId)
 			} else {
 				outBuf = Logger.PrepareSend("Replying", myModels[modelId].GlobalWeights)
 				clientState.IsComputingLocal = false
@@ -524,25 +527,25 @@ func gradientUpdate(nodeId string, modelId string, deltas []float64) bool {
 			if clientState.IsComputingLocal {
 
 				// Just update the local copy of the model
-				validator := myValidators[modelId]
-				validatorWeights := validator.ClientResponses[nodeId]
+				//validator := myValidators[modelId]
+				//validatorWeights := validator.ClientResponses[nodeId]
 
 				for j := 0; j < len(deltas); j++ {
-					validatorWeights[j] = deltas[j]
+					//validatorWeights[j] = deltas[j]
 					clientState.Weights[j] += deltas[j]
 				}
 
-				validator.ClientResponses[nodeId] = validatorWeights
-				validator.NumResponses++
+				//validator.ClientResponses[nodeId] = validatorWeights
+				//validator.NumResponses++
 				clientState.NumValidations++
-				myValidators[modelId] = validator
+				//myValidators[modelId] = validator
 				fmt.Printf("Validation update from %s on %s \n", nodeId, modelId)
 
-				if validator.NumResponses >= len(validator.ClientResponses) {
+				/*if validator.NumResponses >= len(validator.ClientResponses) {
 					fmt.Println("READY FOR VALIDATION MAGIC")
-					//runValidation(modelId)
+					runValidation(modelId)
 					delete(myValidators, modelId) 
-				}
+				}*/
 
 				// Revert the client state
 				clientState.IsComputingLocal = false
@@ -554,14 +557,9 @@ func gradientUpdate(nodeId string, modelId string, deltas []float64) bool {
 				// Update the global model
 				for j := 0; j < len(deltas); j++ {
 					theModel.GlobalWeights[j] += deltas[j]
-					//clientState.Weights[j] += deltas[j]
 				}
 				
 				clientState.NumIterations++
-
-				/*if clientState.NumIterations % 10 == 0 {
-					clientState.Work = append(clientState.Work, deltas)
-				}*/
 
 				theModel.Clients[nodeId] = clientState
 				myModels[modelId] = theModel

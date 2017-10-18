@@ -165,12 +165,14 @@ func heartbeat(logger *govec.GoLog, torDialer proxy.Dialer) {
 }
 
 func parseArgs() {
+
 	flag.Parse()
 	inputargs := flag.Args()
 	if len(inputargs) < 3 {
 		fmt.Println("USAGE: go run torclient.go nodeName studyName datasetName isLocal")
 		os.Exit(1)
 	}
+	
 	name = inputargs[0]
 	modelName = inputargs[1]
 	datasetName = inputargs[2]
@@ -199,7 +201,6 @@ func getTorDialer() proxy.Dialer {
 	torDialer, err := proxy.SOCKS5("tcp", TOR_PROXY, nil, proxy.Direct)
 	checkError(err)
 	return torDialer
-
 }
 
 func sendGradMessage(logger *govec.GoLog, 
