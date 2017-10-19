@@ -101,7 +101,7 @@ def load_dataset(dataset_name):
 
     elif dataset_name == "magic":
 
-        magic = pd.read_csv(os.path.join('..', "data", 'magic04.data'))
+        magic = pd.read_csv(os.path.join('..', "data", 'magic04.data.txt'))
         nn, dd = magic.shape
 
         y = magic.ix[:,dd-1].as_matrix()
@@ -128,6 +128,328 @@ def load_dataset(dataset_name):
         return {"X":X, "y":y, 
                 "Xvalid":Xvalid, 
                 "yvalid":yvalid}
+        
+        
+        
+    elif dataset_name == "bank":
+
+        bank = pd.read_csv(os.path.join('..', "data", 'data_banknote_authentication.txt'))
+        nn, dd = bank.shape
+
+        y = bank.ix[:,dd-1].as_matrix()
+        #y[np.where(y == 'g')] = 1
+        y[np.where(y == 0)] = -1
+
+        npbank = bank.ix[np.random.permutation(nn),:].as_matrix().astype(int)
+        split = int(nn * 0.70)
+
+        X = npbank[0:split-1, 0:dd-2]
+        y = npbank[0:split-1, dd-1]
+        Xvalid = npbank[split:nn-1, 0:dd-2]
+        yvalid = npbank[split:nn-1, dd-1]
+
+        X, mu, sigma = standardize_cols(X)
+        Xvalid, _, _ = standardize_cols(Xvalid, mu, sigma)
+
+        X = np.hstack([np.ones((X.shape[0], 1)), X])
+        Xvalid = np.hstack([np.ones((Xvalid.shape[0], 1)), Xvalid])
+
+        X = normalize_rows(X)
+        Xvalid = normalize_rows(Xvalid)
+
+        return {"X":X, "y":y, 
+                "Xvalid":Xvalid, 
+                "yvalid":yvalid}
+
+
+    elif dataset_name == "transfusion":
+
+        temp = pd.read_csv(os.path.join('..', "data", 'transfusion.data.txt'))
+        nn, dd = temp.shape
+
+        y = temp.ix[:,dd-1].as_matrix()
+        #y[np.where(y == 'g')] = 1
+        y[np.where(y == 0)] = -1
+
+        nptemp = temp.ix[np.random.permutation(nn),:].as_matrix().astype(int)
+        split = int(nn * 0.70)
+
+        X = nptemp[0:split-1, 0:dd-2]
+        y = nptemp[0:split-1, dd-1]
+        Xvalid = nptemp[split:nn-1, 0:dd-2]
+        yvalid = nptemp[split:nn-1, dd-1]
+
+        X, mu, sigma = standardize_cols(X)
+        Xvalid, _, _ = standardize_cols(Xvalid, mu, sigma)
+
+        X = np.hstack([np.ones((X.shape[0], 1)), X])
+        Xvalid = np.hstack([np.ones((Xvalid.shape[0], 1)), Xvalid])
+
+        X = normalize_rows(X)
+        Xvalid = normalize_rows(Xvalid)
+
+        return {"X":X, "y":y, 
+                "Xvalid":Xvalid, 
+                "yvalid":yvalid}
+
+
+    elif dataset_name == "tom":
+
+        temp = pd.read_csv(os.path.join('..', "data", 'TomsHardware-Absolute-Sigma-500.data.txt'))
+        nn, dd = temp.shape
+
+        y = temp.ix[:,dd-1].as_matrix()
+        #y[np.where(y == 4)] = 1
+        y[np.where(y == 0)] = -1
+        
+
+        nptemp = temp.ix[np.random.permutation(nn),:].as_matrix().astype(int)
+        split = int(nn * 0.70)
+
+        X = nptemp[0:split-1, 0:dd-2]
+        y = nptemp[0:split-1, dd-1]
+        Xvalid = nptemp[split:nn-1, 0:dd-2]
+        yvalid = nptemp[split:nn-1, dd-1]
+
+        X, mu, sigma = standardize_cols(X)
+        Xvalid, _, _ = standardize_cols(Xvalid, mu, sigma)
+
+        X = np.hstack([np.ones((X.shape[0], 1)), X])
+        Xvalid = np.hstack([np.ones((Xvalid.shape[0], 1)), Xvalid])
+
+        X = normalize_rows(X)
+        Xvalid = normalize_rows(Xvalid)
+
+        return {"X":X, "y":y, 
+                "Xvalid":Xvalid, 
+                "yvalid":yvalid}
+
+
+    elif dataset_name == "twitter":
+
+        temp = pd.read_csv(os.path.join('..', "data", 'Twitter-Absolute-Sigma-500.data.txt'))
+        nn, dd = temp.shape
+
+        y = temp.ix[:,dd-1].as_matrix()
+        #y[np.where(y == 4)] = 1
+        y[np.where(y == 0)] = -1
+        
+
+        nptemp = temp.ix[np.random.permutation(nn),:].as_matrix().astype(int)
+        split = int(nn * 0.70)
+
+        X = nptemp[0:split-1, 0:dd-2]
+        y = nptemp[0:split-1, dd-1]
+        Xvalid = nptemp[split:nn-1, 0:dd-2]
+        yvalid = nptemp[split:nn-1, dd-1]
+
+        X, mu, sigma = standardize_cols(X)
+        Xvalid, _, _ = standardize_cols(Xvalid, mu, sigma)
+
+        X = np.hstack([np.ones((X.shape[0], 1)), X])
+        Xvalid = np.hstack([np.ones((Xvalid.shape[0], 1)), Xvalid])
+
+        X = normalize_rows(X)
+        Xvalid = normalize_rows(Xvalid)
+
+        return {"X":X, "y":y, 
+                "Xvalid":Xvalid, 
+                "yvalid":yvalid}
+
+    elif dataset_name == "creditcard":
+
+        temp = pd.read_csv(os.path.join('..', "data", 'CreditCard.csv'))
+        nn, dd = temp.shape
+
+        y = temp.ix[:,dd-1].as_matrix()
+        #y[np.where(y == 4)] = 1
+        y[np.where(y == 0)] = -1
+        
+
+        nptemp = temp.ix[np.random.permutation(nn),:].as_matrix().astype(int)
+        split = int(nn * 0.70)
+
+        X = nptemp[0:split-1, 0:dd-2]
+        y = nptemp[0:split-1, dd-1]
+        Xvalid = nptemp[split:nn-1, 0:dd-2]
+        yvalid = nptemp[split:nn-1, dd-1]
+
+        X, mu, sigma = standardize_cols(X)
+        Xvalid, _, _ = standardize_cols(Xvalid, mu, sigma)
+
+        X = np.hstack([np.ones((X.shape[0], 1)), X])
+        Xvalid = np.hstack([np.ones((Xvalid.shape[0], 1)), Xvalid])
+
+        X = normalize_rows(X)
+        Xvalid = normalize_rows(Xvalid)
+
+        return {"X":X, "y":y, 
+                "Xvalid":Xvalid, 
+                "yvalid":yvalid}
+
+
+    elif dataset_name == "eye":
+
+        temp = pd.read_csv(os.path.join('..', "data", 'EEG Eye State.arff.txt'))
+        nn, dd = temp.shape
+
+        y = temp.ix[:,dd-1].as_matrix()
+        #y[np.where(y == 4)] = 1
+        y[np.where(y == 0)] = -1
+        
+
+        nptemp = temp.ix[np.random.permutation(nn),:].as_matrix().astype(int)
+        split = int(nn * 0.70)
+
+        X = nptemp[0:split-1, 0:dd-2]
+        y = nptemp[0:split-1, dd-1]
+        Xvalid = nptemp[split:nn-1, 0:dd-2]
+        yvalid = nptemp[split:nn-1, dd-1]
+
+        X, mu, sigma = standardize_cols(X)
+        Xvalid, _, _ = standardize_cols(Xvalid, mu, sigma)
+
+        X = np.hstack([np.ones((X.shape[0], 1)), X])
+        Xvalid = np.hstack([np.ones((Xvalid.shape[0], 1)), Xvalid])
+
+        X = normalize_rows(X)
+        Xvalid = normalize_rows(Xvalid)
+
+        return {"X":X, "y":y, 
+                "Xvalid":Xvalid, 
+                "yvalid":yvalid}
+
+
+    elif dataset_name == "diabetic":
+
+        temp = pd.read_csv(os.path.join('..', "data", 'messidor_features.arff.txt'))
+        nn, dd = temp.shape
+
+        y = temp.ix[:,dd-1].as_matrix()
+        #y[np.where(y == 4)] = 1
+        y[np.where(y == 0)] = -1
+        
+
+        nptemp = temp.ix[np.random.permutation(nn),:].as_matrix().astype(int)
+        split = int(nn * 0.70)
+
+        X = nptemp[0:split-1, 0:dd-2]
+        y = nptemp[0:split-1, dd-1]
+        Xvalid = nptemp[split:nn-1, 0:dd-2]
+        yvalid = nptemp[split:nn-1, dd-1]
+
+        X, mu, sigma = standardize_cols(X)
+        Xvalid, _, _ = standardize_cols(Xvalid, mu, sigma)
+
+        X = np.hstack([np.ones((X.shape[0], 1)), X])
+        Xvalid = np.hstack([np.ones((Xvalid.shape[0], 1)), Xvalid])
+
+        X = normalize_rows(X)
+        Xvalid = normalize_rows(Xvalid)
+
+        return {"X":X, "y":y, 
+                "Xvalid":Xvalid, 
+                "yvalid":yvalid}
+
+
+    elif dataset_name == "pulsars":
+
+        temp = pd.read_csv(os.path.join('..', "data", 'HTRU_2.csv'))
+        nn, dd = temp.shape
+
+        y = temp.ix[:,dd-1].as_matrix()
+        #y[np.where(y == 4)] = 1
+        y[np.where(y == 0)] = -1
+        
+
+        nptemp = temp.ix[np.random.permutation(nn),:].as_matrix().astype(int)
+        split = int(nn * 0.70)
+
+        X = nptemp[0:split-1, 0:dd-2]
+        y = nptemp[0:split-1, dd-1]
+        Xvalid = nptemp[split:nn-1, 0:dd-2]
+        yvalid = nptemp[split:nn-1, dd-1]
+
+        X, mu, sigma = standardize_cols(X)
+        Xvalid, _, _ = standardize_cols(Xvalid, mu, sigma)
+
+        X = np.hstack([np.ones((X.shape[0], 1)), X])
+        Xvalid = np.hstack([np.ones((Xvalid.shape[0], 1)), Xvalid])
+
+        X = normalize_rows(X)
+        Xvalid = normalize_rows(Xvalid)
+
+        return {"X":X, "y":y, 
+                "Xvalid":Xvalid, 
+                "yvalid":yvalid}
+
+    elif dataset_name == "occupancy":
+
+        temp = pd.read_csv(os.path.join('..', "data", 'datatraining.txt'))
+        nn, dd = temp.shape
+
+        y = temp.ix[:,dd-1].as_matrix()
+        #y[np.where(y == 4)] = 1
+        y[np.where(y == 0)] = -1
+        
+
+        nptemp = temp.ix[np.random.permutation(nn),:].as_matrix().astype(int)
+        split = int(nn * 0.70)
+
+        X = nptemp[0:split-1, 0:dd-2]
+        y = nptemp[0:split-1, dd-1]
+        Xvalid = nptemp[split:nn-1, 0:dd-2]
+        yvalid = nptemp[split:nn-1, dd-1]
+
+        X, mu, sigma = standardize_cols(X)
+        Xvalid, _, _ = standardize_cols(Xvalid, mu, sigma)
+
+        X = np.hstack([np.ones((X.shape[0], 1)), X])
+        Xvalid = np.hstack([np.ones((Xvalid.shape[0], 1)), Xvalid])
+
+        X = normalize_rows(X)
+        Xvalid = normalize_rows(Xvalid)
+
+        return {"X":X, "y":y, 
+                "Xvalid":Xvalid, 
+                "yvalid":yvalid}
+
+
+
+    elif dataset_name == "skin":
+
+        temp = pd.read_csv(os.path.join('..', "data", 'Skin_NonSkin.csv'))
+        nn, dd = temp.shape
+
+        y = temp.ix[:,dd-1].as_matrix()
+        #y[np.where(y == 4)] = 1
+        y[np.where(y == 0)] = -1
+        
+
+        nptemp = temp.ix[np.random.permutation(nn),:].as_matrix().astype(int)
+        split = int(nn * 0.70)
+
+        X = nptemp[0:split-1, 0:dd-2]
+        y = nptemp[0:split-1, dd-1]
+        Xvalid = nptemp[split:nn-1, 0:dd-2]
+        yvalid = nptemp[split:nn-1, dd-1]
+
+        X, mu, sigma = standardize_cols(X)
+        Xvalid, _, _ = standardize_cols(Xvalid, mu, sigma)
+
+        X = np.hstack([np.ones((X.shape[0], 1)), X])
+        Xvalid = np.hstack([np.ones((Xvalid.shape[0], 1)), Xvalid])
+
+        X = normalize_rows(X)
+        Xvalid = normalize_rows(Xvalid)
+
+        return {"X":X, "y":y, 
+                "Xvalid":Xvalid, 
+                "yvalid":yvalid}
+
+
+
+
 
     elif dataset_name == "sns":
 
@@ -161,7 +483,7 @@ def normalize_rows(X):
     # Sets all rows to have L2 norm of 1. Needed for diff priv
     nn, dd = X.shape
     
-    for i in xrange(nn):
+    for i in range(nn):
         X[i,] = X[i,] / norm(X[i,], 2)
 
     return X

@@ -12,6 +12,7 @@ data = utils.load_dataset("logisticData")
 XBin, yBin = data['X'], data['y']
 XBinValid, yBinValid = data['Xvalid'], data['yvalid']
 
+
 #Shuffle data
 
 (n,d) = XBin.shape
@@ -116,7 +117,7 @@ if __name__ == "__main__":
     training_batch_size = 5
     print("STOCHASTIC BS is %.0f" % training_batch_size)
           
-    global_model_sgd.sgd_fit_private(alpha=1, eta=1, batch_size=training_batch_size)
+    global_model_sgd.sgd_fit_private(alpha=1, eta=0.01, batch_size=training_batch_size)
     print("global 1 SGD Training error %.3f" %
           utils.classification_error(global_model_sgd.predict(XBin), yBin))
     print("global 1 SGD Validation error %.3f" %
