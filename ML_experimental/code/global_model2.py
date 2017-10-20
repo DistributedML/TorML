@@ -13,7 +13,8 @@ import minimizers
 import utils
 from matplotlib.backends.backend_pdf import PdfPages
 
-
+# Objective vs iteration for alpha
+# Final obj value vs alpha
 
 class globalModel2:
 

@@ -140,9 +140,6 @@ if __name__ == "__main__":
     print("global SVM Validation error %.3f" %
           utils.classification_error(global_model_pegasos.predict(XBinValid), yBinValid))
 
-
-
-
     # FULL
     sk_full = logistic_model.logRegL2(XBin, yBin,
                                       lammy=0.1, verbose=0, maxEvals=100000)

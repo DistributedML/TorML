@@ -10,16 +10,10 @@ import pdb
 
 if __name__ == "__main__":
 
-    dataset = "credittrain"
-    data = utils.load_dataset(dataset)
-
-    print("Download complete.")
-
-    X = data['X']
-    y = data['y']
+    dataset = "creditbad"
 
     batch_size = 50
-    iterations = 1000000
+    iterations = 200000
 
     # Global
     numFeatures = logistic_model.init(dataset)

@@ -42,7 +42,7 @@ type ClientState struct {
 	IsComputingLocal 	bool
 	Weights 			[]float64
 	OutlierScore		float64
-	Work 				[][]float64
+	Work 				[]float64
 }
 
 // An active model: list of participants and weights
@@ -72,13 +72,17 @@ var (
 	myModels 			map[string]Model
 	myValidators	 	map[string]Validator
 
-	MULTICAST_RATE		float64 = 0.8
-	THRESHOLD			float64 = 0.005
+	MULTICAST_RATE		float64 = 0.9
+	
+	// Kick a client out after 0.5% fail
+	THRESHOLD			float64 = -0.005  
 
 	// Test Module for python
-	testModule  *python.PyObject
-	testFunc    *python.PyObject
-	trainFunc   *python.PyObject
+	pyTestModule  *python.PyObject
+	pyTestFunc    *python.PyObject
+	pyTrainFunc   *python.PyObject
+	pyRoniFunc    *python.PyObject
+
 )
 
 /*
@@ -102,11 +106,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
     	
     		fmt.Fprintf(w, "\n");	
     		train_error, test_error = testModel(model, node)
-    		fmt.Fprintf(w, "%s iterations: %d\n", node, clientState.NumIterations)
-    		fmt.Fprintf(w, "%s validations: %d\n", node, clientState.NumValidations)
-    		fmt.Fprintf(w, "%s L2 outlier score: %f\n", node, clientState.OutlierScore)	
-    		fmt.Fprintf(w, "%s train Loss: %f\n", node, train_error)	
-    		fmt.Fprintf(w, "%s test Loss: %f\n", node, test_error)	
+    		fmt.Fprintf(w, "%.5s iterations: %d\n", node, clientState.NumIterations)
+    		fmt.Fprintf(w, "%.5s validations: %d\n", node, clientState.NumValidations)
+    		fmt.Fprintf(w, "%.5s L2 outlier score: %f\n", node, clientState.OutlierScore)	
+    		fmt.Fprintf(w, "%.5s train Loss: %f\n", node, train_error)	
+    		fmt.Fprintf(w, "%.5s test Loss: %f\n", node, test_error)	
     	
     	}
     }
@@ -134,32 +138,26 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
     	fmt.Fprintf(w, "Model flushed.")
 
-    } else if req == "workflush" {
+	} else if req == "workflush" {
+
+		file, err := os.Create("workflush.csv")
+    	checkError(err)
+    	defer file.Close()
+
+    	writer := csv.NewWriter(file)
+    	defer writer.Flush()
 
     	for _, model := range myModels {
 
     		for node, modelState := range model.Clients {
-    			
-    			file, err := os.Create("work_" + node + ".csv")
-    			checkError(err)
-    			defer file.Close()
-
-    			writer := csv.NewWriter(file)
-    			defer writer.Flush()
-
-    			for _, update := range modelState.Work {
-
-	    			st := strings.Fields(strings.Trim(fmt.Sprint(update), "[]"))
-	    			writer.Write(st)
-
-    			}
-
+    			st := strings.Fields(strings.Trim(fmt.Sprint(modelState.Work), "[]"))
+    			st = append(st, node)
+    			writer.Write(st)
     		}       
     	}
 
-    	fmt.Fprintf(w, "Model flushed.")
+	}
 
-    }
 }
 
 
@@ -190,9 +188,11 @@ func pyInit() {
 	python.PyList_Insert(sysPath, 0, python.PyString_FromString("./"))
 	python.PyList_Insert(sysPath, 0, python.PyString_FromString("../ML/code"))
 
-	testModule = python.PyImport_ImportModule("logistic_model_test")
-	trainFunc = testModule.GetAttrString("train_error")
-	testFunc = testModule.GetAttrString("test_error")
+	pyTestModule = python.PyImport_ImportModule("logistic_model_test")
+	pyTrainFunc = pyTestModule.GetAttrString("train_error")
+	pyTestFunc = pyTestModule.GetAttrString("test_error")
+	pyRoniFunc = pyTestModule.GetAttrString("roni")
+
 }
 
 func main() {
@@ -278,7 +278,7 @@ func processControlMsg(inData MessageData, Logger *govec.GoLog) []byte {
 			}				
 
 		case "solve":
-			ok = processJoin(inData.SourceNode, inData.ModelId, inData.Key, inData.NumFeatures)
+			ok = processJoin(inData.ModelId, inData.Key, inData.NumFeatures)
 			if ok {
 				address, port := getFreeAddress()
 				go gradientWorker(inData.SourceNode, address, Logger)
@@ -328,38 +328,42 @@ func gradientWorker(nodeId string,
 		var inData GradientData
 		Logger.UnpackReceive("Received Message From Client", buf[0:], &inData)
 
+		puzzleKey := inData.Key
 		modelId := inData.ModelId
 
-		// Not ready for gradients yet
-		if len(myModels[modelId].Clients) < myModels[modelId].MinClients {
-			outBuf = Logger.PrepareSend("Replying", make([]float64, 0))
-		} else {
+		_, modelExists := myModels[modelId]
+		bufferReply := make([]float64, 0)
 
-			setUpValid := false
-
-			if rand.Float64() > MULTICAST_RATE {
-				setUpValid = true
-			}
-
-			gradientUpdate(nodeId, modelId, inData.Deltas)
+		if modelExists {
 
 			mutex.Lock()
-			clientState := myModels[modelId].Clients[nodeId]
+			_, clientExists := myModels[modelId].Clients[puzzleKey]
+			enoughClients := len(myModels[modelId].Clients) >= myModels[modelId].MinClients
 
-			if setUpValid {
-				outBuf = Logger.PrepareSend("Replying", clientState.Weights)
-				clientState.IsComputingLocal = true
-				fmt.Printf("Setup Validation for %s\n", nodeId)
-			} else {
-				outBuf = Logger.PrepareSend("Replying", myModels[modelId].GlobalWeights)
-				clientState.IsComputingLocal = false
-			}
+			if clientExists && enoughClients {
 
-			myModels[modelId].Clients[nodeId] = clientState
+				if rand.Float64() > MULTICAST_RATE {
+					startValidation(modelId)
+				}
+
+				gradientUpdate(puzzleKey, modelId, inData.Deltas)
+				clientState := myModels[modelId].Clients[puzzleKey]
+
+				if isClientValidating(modelId, puzzleKey) {
+					bufferReply = clientState.Weights
+					clientState.IsComputingLocal = true
+				} else {
+					bufferReply =  myModels[modelId].GlobalWeights
+					clientState.IsComputingLocal = false
+				}
+
+				myModels[modelId].Clients[puzzleKey] = clientState
+			} 
+
 			mutex.Unlock()
-		
-		}
+		} 
 
+		outBuf = Logger.PrepareSend("Replying...", bufferReply)
 	  	conn.Write(outBuf)
 
 	}
@@ -381,13 +385,13 @@ func testModel(model Model, node string) (float64, float64) {
 		python.PyList_SetItem(argArray, i, python.PyFloat_FromDouble(weights[i]))
 	}
 
-	test_result := testFunc.CallFunction(argArray)
-	test_err := python.PyFloat_AsDouble(test_result)
+	pyTestResult := pyTestFunc.CallFunction(argArray)
+	testErr := python.PyFloat_AsDouble(pyTestResult)
 
-	train_result := trainFunc.CallFunction(argArray)
-	train_err := python.PyFloat_AsDouble(train_result)
+	pyTrainResult := pyTrainFunc.CallFunction(argArray)
+	trainErr := python.PyFloat_AsDouble(pyTrainResult)
 	
-	return train_err, test_err
+	return trainErr, testErr
 }
 
 func startModel(modelId string, numFeatures int, minClients int) bool {
@@ -447,7 +451,7 @@ func makePuzzle(modelId string) string {
 }
 
 // numFeature is just bootleg schema validation 
-func processJoin(node string, modelId string, givenKey string, numFeatures int) bool {
+func processJoin(modelId string, givenKey string, numFeatures int) bool {
 
 	fmt.Println("Got attempted puzzle solution")
 
@@ -466,9 +470,9 @@ func processJoin(node string, modelId string, givenKey string, numFeatures int) 
 		return false
 	}
 
-	_, exists = theModel.Clients[node]
+	_, exists = theModel.Clients[givenKey]
 	if exists {
-		fmt.Printf("Node %s is already joined in model: %s \n", node, modelId)
+		fmt.Printf("Node %.5s is already joined in model: %s \n", givenKey, modelId)
 		mutex.Unlock()
 		return false
 	}
@@ -487,10 +491,9 @@ func processJoin(node string, modelId string, givenKey string, numFeatures int) 
 			if strings.HasSuffix(hashString, "0000") {
 
 				// Add node
-				theModel.Clients[node] = 
-					ClientState{0, 0, false, 
-						newRandomModel(numFeatures), 0, make([][]float64, 0)}
-				fmt.Printf("Joined %s in model %s \n", node, modelId)
+				theModel.Clients[givenKey] = 
+					ClientState{0, 0, false, newRandomModel(numFeatures), 0, make([]float64, 0)}
+				fmt.Printf("Joined %.5s in model %s \n", givenKey, modelId)
 				
 				// Write the solution
 				theModel.Puzzles[lock] = givenKey
@@ -499,10 +502,7 @@ func processJoin(node string, modelId string, givenKey string, numFeatures int) 
 
 				return true
 
-			} else {
-				fmt.Printf("Solution is not right: %s\n", givenKey)
-				fmt.Printf("Solution answer: %s\n", hashString)
-			}
+			} 
 		} 
 	}
 
@@ -510,46 +510,70 @@ func processJoin(node string, modelId string, givenKey string, numFeatures int) 
 	return false
 }
 
-func gradientUpdate(nodeId string, modelId string, deltas []float64) bool {
+
+func gradientUpdate(puzzleKey string, modelId string, deltas []float64) bool {
 
 	_, exists := myModels[modelId]
 	if exists {
 
-		_, exists = myModels[modelId].Clients[nodeId]
+		_, exists = myModels[modelId].Clients[puzzleKey]
 		
 		// Add in the deltas
 		if exists { 
 
-			mutex.Lock()
 			theModel := myModels[modelId]
-			clientState := theModel.Clients[nodeId]
+			clientState := theModel.Clients[puzzleKey]
 
 			if clientState.IsComputingLocal {
 
 				// Just update the local copy of the model
-				//validator := myValidators[modelId]
-				//validatorWeights := validator.ClientResponses[nodeId]
+				validator := myValidators[modelId]
+				validatorWeights := validator.ClientResponses[puzzleKey]
 
 				for j := 0; j < len(deltas); j++ {
-					//validatorWeights[j] = deltas[j]
+					validatorWeights[j] = deltas[j]
 					clientState.Weights[j] += deltas[j]
 				}
 
-				//validator.ClientResponses[nodeId] = validatorWeights
-				//validator.NumResponses++
+				validator.ClientResponses[puzzleKey] = validatorWeights
+				validator.NumResponses++
 				clientState.NumValidations++
-				//myValidators[modelId] = validator
-				fmt.Printf("Validation update from %s on %s \n", nodeId, modelId)
+				myValidators[modelId] = validator
+				fmt.Printf("Validation update from %.5s on %s \n", puzzleKey, modelId)
 
-				/*if validator.NumResponses >= len(validator.ClientResponses) {
-					fmt.Println("READY FOR VALIDATION MAGIC")
-					runValidation(modelId)
+				scoreMap := make(map[string]float64)
+				isMulticast := false
+				if validator.NumResponses >= len(validator.ClientResponses) {
+					scoreMap = runValidation(modelId)
+					isMulticast = true
 					delete(myValidators, modelId) 
-				}*/
+				}
 
 				// Revert the client state
 				clientState.IsComputingLocal = false
-				theModel.Clients[nodeId] = clientState
+				theModel.Clients[puzzleKey] = clientState
+
+				// Add all the multicast scores
+				if isMulticast {
+					
+					for node, roni := range scoreMap {
+						roniClientState := theModel.Clients[node]
+						roniClientState.OutlierScore += roni
+						roniClientState.Work = append(roniClientState.Work, roni)
+						theModel.Clients[node] = roniClientState
+
+						if roniClientState.OutlierScore < THRESHOLD {
+							fmt.Printf("node %.5s has RONI %5f past THRESHOLD. KICKED! \n", node, roniClientState.OutlierScore)
+							delete(theModel.Clients, node)
+							delete(theModel.Puzzles, node)
+						}
+					}   
+
+					//fmt.Printf("Finished updating validation. There are now %d left.\n",
+					//	len(theModel.Clients))
+
+				}
+
 				myModels[modelId] = theModel
 
 			} else {
@@ -561,79 +585,65 @@ func gradientUpdate(nodeId string, modelId string, deltas []float64) bool {
 				
 				clientState.NumIterations++
 
-				theModel.Clients[nodeId] = clientState
+				theModel.Clients[puzzleKey] = clientState
 				myModels[modelId] = theModel
-				fmt.Printf("Grad update from %s on %s \n", nodeId, modelId)
+				fmt.Printf("Grad update from %.5s on %s \n", puzzleKey, modelId)
 							
 			}
 
-			// End of gradient update
-			mutex.Unlock()
-
 		} else {
-			fmt.Printf("Client %s is not in this model.\n")
+			fmt.Printf("Client %.5s is not in this model.\n", puzzleKey)
 		}
+
 	}
 
 	return exists
 }
 
-func runValidation(modelId string) {
+func runValidation(modelId string) map[string]float64 {
 
-	// Convert client responses into mat64 vectors
-	scores := make(map[string]*mat64.Dense)
-	for node, model := range myValidators[modelId].ClientResponses {
-		scores[node] = mat64.NewDense(myModels[modelId].NumFeatures, 1, model)
+	fmt.Printf("Running validation....\n")
+
+	truthModel := myValidators[modelId].ValidationModel
+	truthArray := python.PyList_New(len(truthModel))
+
+	for i := 0; i < len(truthModel); i++ {
+		python.PyList_SetItem(truthArray, i, python.PyFloat_FromDouble(truthModel[i]))
 	}
 
-	mutex.Lock()
-	theModel := myModels[modelId]
-	for node1, vector1 := range scores {
-		
-		// Sum distance between vector1 and all other vectors
-		var rollingSum float64
-		for _, vector2 := range scores {
-			rollingSum += FindEucDistance(vector1, vector2)
+	scores := make(map[string]float64)
+
+	for node, response := range myValidators[modelId].ClientResponses {
+	
+		argArray := python.PyList_New(len(truthModel))
+
+		for i := 0; i < len(truthModel); i++ {
+			python.PyList_SetItem(argArray, i, python.PyFloat_FromDouble(response[i]))
 		}
 
-		// Ignore distance to itself, which is always 0.
-		rollingSum /= float64(len(scores) - 1) 
+		pyRoni := pyRoniFunc.CallFunction(truthArray, argArray)
+		roni_score := python.PyFloat_AsDouble(pyRoni)
 
-		// Normalize for number of features
-		rollingSum /= float64(myModels[modelId].NumFeatures)
-
-		// Atomic update
-		clientState := theModel.Clients[node1]
-		clientState.OutlierScore += rollingSum
-		theModel.Clients[node1] = clientState
-
-		// save the current rolling
-		rollingAvg := rollingSum / float64(clientState.NumValidations + 1)
-		fmt.Printf("Average Distance for %s: %.9f \n", node1, rollingAvg)
-
-		if rollingAvg > THRESHOLD {
-			fmt.Printf("node %s has average %7f over THRESHOLD %7f. KICKED! \n", 
-				node1, rollingAvg, THRESHOLD)
-			kickoutNode(modelId, node1)
-		}
+		fmt.Printf("RONI for node %.5s is %f \n", node, roni_score)
+		scores[node] = roni_score
 
 	}
 
-	myModels[modelId] = theModel
-	mutex.Unlock()
+	return scores
 
 }
 
 func kickoutNode(modelId string, nodeId string) {
 
 	// Long and annoying atomic delete
-	mutex.Lock()
 	theModel := myModels[modelId]
+	
 	clientStates := theModel.Clients
 	delete(clientStates, nodeId)
 	theModel.Clients = clientStates
+
+	delete(theModel.Puzzles, nodeId)
 	myModels[modelId] = theModel
-	mutex.Unlock()
 
 	fmt.Printf("Removed node %s from model\n", nodeId)
 
@@ -644,8 +654,6 @@ func startValidation(modelId string) {
 
 	_, exists := myValidators[modelId]
 	if !exists {
-
-		fmt.Println("Doing a validation multicast")
 
 		// Create new validator object
 		var valid Validator
@@ -663,8 +671,7 @@ func startValidation(modelId string) {
 			valid.ClientResponses[node] = make([]float64, myModels[modelId].NumFeatures)
 		}
 
-		fmt.Println("Setup Validation multicast")	
-
+		fmt.Printf("Setup Validation multicast for %d clients.\n", len(myModels[modelId].Clients))	
 	} 
 
 }

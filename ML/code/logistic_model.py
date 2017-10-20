@@ -16,7 +16,7 @@ d = 0
 hist_grad = 0
 
 scale = True
-diffpriv = False
+diffpriv = True
 
 def init(dataset):
 

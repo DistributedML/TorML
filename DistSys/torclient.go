@@ -86,7 +86,6 @@ func pyInit(datasetName string) {
   	pulledGradient = make([]float64, numFeatures)
 
   	fmt.Printf("Sucessfully pulled dataset. Features: %d\n", numFeatures)
-
 }
 
 func main() {
