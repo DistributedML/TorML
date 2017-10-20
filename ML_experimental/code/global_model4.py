@@ -1,22 +1,15 @@
 from __future__ import division
 import numpy as np
-import minimizers
-import utils
-import pdb
+import logistic_model_test
 from numpy.linalg import norm
 import emcee
 #import matplotlib.pyplot as pl
 import matplotlib.pyplot as plt
-import random
-import math
-import minimizers
-import utils
-from matplotlib.backends.backend_pdf import PdfPages
 
-# Objective vs iteration for alpha
-# Final obj value vs alpha
 
-class globalModel2:
+
+
+class globalModel4:
 
     # Logistic Regression
     def __init__(self, logistic=False, verbose=1, maxEvals=400):
@@ -31,7 +24,8 @@ class globalModel2:
 
     
     
-    def sgd_fit_private(self, alpha, eta, batch_size=0,dataset='', *args):
+    
+    def sgd_fit_private(self, alpha, XBin, yBin, XBinValid, yBinValid, eta, batch_size=0,dataset='', *args):
         
         #print ("Training model via private SGD.")
         
@@ -93,6 +87,9 @@ class globalModel2:
         funEvals = 1
         i=1
         
+        train_progress = []
+        test_progress = []
+        
         while True:
             
             d1,d2 = sample.shape
@@ -123,12 +120,13 @@ class globalModel2:
             # Update parameters
             self.w = self.w + delta
             
+            train_progress.append(logistic_model_test.train_error(self.w, XBin, yBin))
+            test_progress.append(logistic_model_test.test_error(self.w, dataset, XBinValid, yBinValid))
+            
             # Test termination conditions
             optCond = norm(g, float('inf'))
             
-            
-            if i % 10000 == 0:
-                print(i)
+            #print("alpha = ", alpha)
             
             if optCond < optTol:
                 #print("1",f_new)
@@ -145,43 +143,20 @@ class globalModel2:
    
 # -------------------------------------------------------------------------------------
          
-        #For plotting objective value against iterations     
+        #For plotting training and validation error against iterations     
+            
+            
+        #s = 'alpha = ' + str(alpha)
+        s2 = 'dataset = ' + dataset + ' & alpha size = ' + str(alpha)
+        #fig = plt.figure()
+        plt.plot(train_progress,label="Training")
+        plt.plot(test_progress,label="Validation")
+        plt.ylabel('Training & Validation error')
+        plt.xlabel('Number of iterations')
+        plt.title(s2)
+        plt.legend()
 
-#        i=0 
-#        step=10
-#        faverage=[]
-#        while i < len(fValues):
-#            end=min(i+step,len(fValues))
-#            a=fValues[i:end]
-#            b=np.mean(a)*np.ones((len(a),1))
-#            faverage.append(b)
-#            i=i+step
-#        
-#        a = faverage[0]
-#        for j in range(1,len(faverage)):
-#            a=np.concatenate((a,faverage[j]))
-#            
-#        fValuesAverage = a 
-#        
-#        
-#            
-#            
-#        s = 'alpha = ' + str(alpha)
-#        #'alpha = [0.3, 0.5, 1, 1.5]'
-#        s2 = 'dataset = ' + dataset + ' & batch size = ' + str(batch_size)
-#        #fig = plt.figure()
-#        plt.plot(iterations,fValuesAverage,label=s)
-#        plt.ylabel('Value of objective')
-#        plt.xlabel('Number of iterations')
-#        plt.title(s2)
-#        plt.legend()
 
-        #print ("Done fitting global model.")
-# -------------------------------------------------------------------------------------
-        
-        # For plotting final objective value against alpha
-        #print("3",f_new)
-        return f_new  
 
     
     
