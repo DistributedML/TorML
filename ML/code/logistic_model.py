@@ -40,7 +40,7 @@ def init(dataset):
     def lnprob(x,alpha):
         return -(alpha/2)*np.linalg.norm(x)
         
-    nwalkers = 10 * d
+    nwalkers = max(4*d,250)
     sampler = emcee.EnsembleSampler(nwalkers, d, lnprob, args=[epsilon])
     
     p0 = [np.random.rand(d) for i in range(nwalkers)]
