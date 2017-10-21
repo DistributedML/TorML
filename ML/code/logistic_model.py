@@ -11,15 +11,16 @@ X = 0
 y = 0
 iteration = 1
 alpha = 1e-2
-epsilon = 1
 d = 0
 hist_grad = 0
+epsilon = 0
 
 scale = True
 diffpriv = True
 
-def init(dataset):
+def init(dataset, epsilon):
 
+    passedEpsilon = epsilon
     data = utils.load_dataset(dataset)
 
     global X
@@ -41,7 +42,7 @@ def init(dataset):
         return -(alpha/2)*np.linalg.norm(x)
         
     nwalkers = max(4*d,250)
-    sampler = emcee.EnsembleSampler(nwalkers, d, lnprob, args=[epsilon])
+    sampler = emcee.EnsembleSampler(nwalkers, d, lnprob, args=[passedEpsilon])
     
     p0 = [np.random.rand(d) for i in range(nwalkers)]
     pos, _, state = sampler.run_mcmc(p0,100)

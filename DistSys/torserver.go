@@ -75,7 +75,7 @@ var (
 	MULTICAST_RATE		float64 = 0.9
 	
 	// Kick a client out after 0.5% fail
-	THRESHOLD			float64 = -0.005  
+	THRESHOLD			float64 = -0.02
 
 	// Test Module for python
 	pyTestModule  *python.PyObject
