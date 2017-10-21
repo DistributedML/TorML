@@ -74,8 +74,8 @@ var (
 
 	MULTICAST_RATE		float64 = 0.9
 	
-	// Kick a client out after 0.5% fail
-	THRESHOLD			float64 = -0.02
+	// Kick a client out after 1% of RONI
+	THRESHOLD			float64 = -0.01
 
 	// Test Module for python
 	pyTestModule  *python.PyObject
@@ -337,17 +337,23 @@ func gradientWorker(nodeId string,
 		if modelExists {
 
 			mutex.Lock()
+
 			_, clientExists := myModels[modelId].Clients[puzzleKey]
 			enoughClients := len(myModels[modelId].Clients) >= myModels[modelId].MinClients
 
 			if clientExists && enoughClients {
+				gradientUpdate(puzzleKey, modelId, inData.Deltas)
+			}
+
+			// Hacky fix, but double check if thid client was kicked out at the last validation
+			_, clientExists = myModels[modelId].Clients[puzzleKey]
+			if clientExists && enoughClients {
+
+				clientState := myModels[modelId].Clients[puzzleKey]
 
 				if rand.Float64() > MULTICAST_RATE {
 					startValidation(modelId)
 				}
-
-				gradientUpdate(puzzleKey, modelId, inData.Deltas)
-				clientState := myModels[modelId].Clients[puzzleKey]
 
 				if isClientValidating(modelId, puzzleKey) {
 					bufferReply = clientState.Weights
