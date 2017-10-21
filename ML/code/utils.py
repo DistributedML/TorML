@@ -32,6 +32,28 @@ def sliceup(numSplits, dataset):
     datatest = np.hstack((Xvalid, yvalid.reshape((numTestRows, 1))))
     np.savetxt("../data/" + dataset + "test.csv", datatest, delimiter=",")
 
+def bootstrap(numSets, dataset):
+
+    data = load_dataset(dataset)
+    X, y = data['X'], data['y']
+    Xvalid, yvalid = data['Xvalid'], data['yvalid']
+
+    nn = X.shape[0]
+
+    # Sample n points with replacement from n examples
+    for i in range(numSets):
+        bootsample = np.random.choice(nn, nn)
+        Xboot = X[bootsample, :]
+        yboot = y[bootsample]
+
+        dataslice = np.hstack((Xboot, yboot.reshape((nn, 1))))
+        np.savetxt("../bootstraps/" + dataset + "_boot_" + 
+            str(i + 1) + "_g.csv", dataslice, delimiter=",")
+
+        dataslice = np.hstack((Xboot, (yboot * -1).reshape((nn, 1))))
+        np.savetxt("../bootstraps/" + dataset + "_boot_" + 
+            str(i + 1) + "_b.csv", dataslice, delimiter=",")
+
 
 def load_dataset(dataset_name):
 
