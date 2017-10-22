@@ -10,13 +10,14 @@ import pdb
 
 if __name__ == "__main__":
 
-    dataset = "creditbad"
+    dataset = "credittrain"
 
     batch_size = 50
-    iterations = 200000
+    iterations = 50000
+    epsilon = 1000
 
     # Global
-    numFeatures = logistic_model.init(dataset)
+    numFeatures = logistic_model.init(dataset, epsilon=epsilon)
     weights = np.random.rand(numFeatures)
     
     rolling_average = np.zeros([iterations, numFeatures])

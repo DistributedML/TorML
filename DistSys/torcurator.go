@@ -20,10 +20,10 @@ var (
 )
 
 type MessageData struct {
-  Type      string
+  Type          string
   SourceNode    string
   ModelId       string
-  Key       string
+  Key           string
   NumFeatures   int
   MinClients    int
 }
