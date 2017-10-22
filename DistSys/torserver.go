@@ -76,14 +76,15 @@ var (
 
 	MULTICAST_RATE		float64 = 0.9
 	
-	// Kick a client out after 1% of RONI
-	THRESHOLD			float64 = -0.01
+	// Kick a client out after 2% of RONI
+	THRESHOLD			float64 = -0.1
 
 	// Test Module for python
 	pyTestModule  *python.PyObject
 	pyTestFunc    *python.PyObject
 	pyTrainFunc   *python.PyObject
 	pyRoniFunc    *python.PyObject
+	pyPlotFunc    *python.PyObject
 
 )
 
@@ -104,7 +105,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
     	model := myModels[req]
     	trainError, testError := testModel(model, "global")
     	fmt.Fprintf(w, "Train Loss: %f\n", trainError)	
-    	fmt.Fprintf(w, "Test Loss: %f\n", testError)	
+    	fmt.Fprintf(w, "Test Loss: %f\n", testError)
+    	fmt.Fprintf(w, "Num Clients: %d\n", len(model.Clients))
 
     	for node, clientState := range model.Clients {
     	
@@ -187,6 +189,7 @@ func pyInit() {
 	pyTrainFunc = pyTestModule.GetAttrString("train_error")
 	pyTestFunc = pyTestModule.GetAttrString("test_error")
 	pyRoniFunc = pyTestModule.GetAttrString("roni")
+	pyPlotFunc = pyTestModule.GetAttrString("plot")
 
 }
 
@@ -273,7 +276,21 @@ func lossFlush() {
 	mutex.Lock()
 	st := strings.Fields(strings.Trim(fmt.Sprint(lossProgress), "[]"))
 	writer.Write(st)
+
+	/*
+
+	UNUSED GO PYTHON CODE. IT DOESNT WORK 
+	plotArray := python.PyList_New(len(lossProgress))
+
+	for i := 0; i < len(lossProgress); i++ {
+		python.PyList_SetItem(plotArray, i, python.PyFloat_FromDouble(lossProgress[i]))
+	}
+
+	isPlotted := pyPlotFunc.CallFunction(plotArray)
+	fmt.Println(python.PyFloat_AsDouble(isPlotted))*/
+
 	mutex.Unlock()
+
 
 }
 

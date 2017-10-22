@@ -49,3 +49,12 @@ def roni(ww, delta):
 
     # How much does delta improve the validation error?
     return g_err - new_err
+
+def plot(data):
+
+    data = np.loadtxt("lossflush.csv", delimiter=',')
+    fig = plt.figure()
+    plt.plot(data)
+    fig.savefig("loss.jpeg")
+
+    return 1
