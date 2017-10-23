@@ -16,7 +16,7 @@ hist_grad = 0
 epsilon = 0
 
 scale = True
-diffpriv = True
+diffpriv = False
 
 def init(dataset, epsilon):
 
@@ -92,10 +92,6 @@ def privateFun(theta, ww, batch_size=0):
         idx = range(nn)
 
     f, g = funObj(ww, X[idx, :], y[idx], batch_size)
-
-    # Batch averaging
-    if batch_size > 0 and batch_size < nn:
-        g = g / batch_size
 
     # AdaGrad
     # global hist_grad

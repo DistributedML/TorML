@@ -74,7 +74,7 @@ var (
 	myModels 			map[string]Model
 	myValidators	 	map[string]Validator
 
-	MULTICAST_RATE		float64 = 0.9
+	MULTICAST_RATE		float64 = 1.1
 	
 	// Kick a client out after 2% of RONI
 	THRESHOLD			float64 = -0.1

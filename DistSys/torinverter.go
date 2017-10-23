@@ -78,7 +78,7 @@ func writeModel(weights []float64) {
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
 
-	st = strings.Fields(strings.Trim(fmt.Sprint(weights), "[]"))
+	st := strings.Fields(strings.Trim(fmt.Sprint(weights), "[]"))
 	writer.Write(st)       
 
 	fmt.Println("Victim written.")
@@ -132,7 +132,7 @@ func main() {
   	
   	sendGradMessage(logger, torDialer, pulledGradient, true)
 
-  	for i := 0; i < 200000; i++ { 
+  	for i := 0; i <= 10000; i++ { 
     	sendGradMessage(logger, torDialer, pulledGradient, false)
     	if i % 100 == 0 {
     		writeModel(victimModel)

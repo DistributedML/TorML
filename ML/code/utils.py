@@ -12,7 +12,7 @@ def sliceup(numSplits, dataset):
     data = load_dataset(dataset)
 
     X, y = data['X'], data['y']
-    Xvalid, yvalid = data['Xvalid'], data['yvalid']
+    #Xvalid, yvalid = data['Xvalid'], data['yvalid']
 
     randseed = np.random.permutation(X.shape[0])
     X = X[randseed, :]
@@ -28,9 +28,9 @@ def sliceup(numSplits, dataset):
                         y[(i * numRows):((i + 1) * numRows)].reshape((numRows, 1))))
         np.savetxt("../data/" + dataset + str(i + 1) + ".csv", dataslice, delimiter=",")
 
-    numTestRows = Xvalid.shape[0]
-    datatest = np.hstack((Xvalid, yvalid.reshape((numTestRows, 1))))
-    np.savetxt("../data/" + dataset + "test.csv", datatest, delimiter=",")
+    #numTestRows = Xvalid.shape[0]
+    #datatest = np.hstack((Xvalid, yvalid.reshape((numTestRows, 1))))
+    #np.savetxt("../data/" + dataset + "test.csv", datatest, delimiter=",")
 
 def bootstrap(numSets, dataset):
 

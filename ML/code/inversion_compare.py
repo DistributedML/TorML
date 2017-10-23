@@ -10,7 +10,7 @@ if __name__ == "__main__":
 	victim_csv = sys.argv[1]
 
 	# Inverted attacked dataset
-	data = utils.load_dataset("credit1")
+	data = utils.load_dataset("creditnegative")
 	X, y = data['X'], data['y']
 	
 	testdata = utils.load_dataset("credittest")
@@ -30,4 +30,4 @@ if __name__ == "__main__":
 
 	print("Agreement is %.3f" % (sum(victim_hat == real_hat) / float(real_hat.shape[0])))
 
-
+	pdb.set_trace()
