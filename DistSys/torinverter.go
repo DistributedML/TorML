@@ -132,7 +132,7 @@ func main() {
   	
   	sendGradMessage(logger, torDialer, pulledGradient, true)
 
-  	for i := 0; i <= 10000; i++ { 
+  	for i := 0; i <= 3000; i++ { 
     	sendGradMessage(logger, torDialer, pulledGradient, false)
     	if i % 100 == 0 {
     		writeModel(victimModel)

@@ -291,7 +291,6 @@ func lossFlush() {
 
 	mutex.Unlock()
 
-
 }
 
 // Sets up the TCP connection, and attaches GoVector.
