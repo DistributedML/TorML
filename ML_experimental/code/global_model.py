@@ -106,7 +106,7 @@ class globalModel:
         
         ndim = d
         #ndim=10
-        nwalkers = 4*d
+        nwalkers = max(4*d,250)
         #nwalkers=50
         p0 = [np.random.rand(ndim) for i in range(nwalkers)]
         #p0 = np.random.randn(nwalkers, ndim)
@@ -114,7 +114,7 @@ class globalModel:
         
         pos, prob, state = sampler.run_mcmc(p0,100)
         sampler.reset()
-        #print(d)
+        print(d)
         
         #sampler.run_mcmc(pos, 1000)
         sampler.run_mcmc(pos, 1000,rstate0=state)

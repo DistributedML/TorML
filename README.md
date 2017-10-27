@@ -14,9 +14,9 @@ I found this file in: <tor_dir>/Browser/TorBrowser/Data/Tor
 Add the following config parameters:
 ```
 HiddenServiceDir <your_directory>  
-HiddenServicePort 80 127.0.0.1:6767 
-HiddenServicePort 5005 127.0.0.1:5005  
-HiddenServicePort 6000 127.0.0.1:6000  
+HiddenServicePort 80 127.0.0.1:6767       # Port for the webinterface
+HiddenServicePort 5005 127.0.0.1:5005     # Control port, used for joining and curating
+HiddenServicePort 6000 127.0.0.1:6000     # Worker ports: By default we use from 6000 - 6010
 HiddenServicePort 6001 127.0.0.1:6001  
 HiddenServicePort etc... 127.0.0.1:etc...    
 Log notice file /home/cfung/workspace/tor-browser_en-US/Browser/TorBrowser/Log/tor.log  
@@ -33,3 +33,4 @@ On client machines:
 `go run torclient.go h1 studyName dataFile`  
 `go run torclient.go h2 studyName dataFile`  
 
+A good test set is the credit dataset.

@@ -38,7 +38,8 @@ def makeGraph(data):
     nPoints, nModels = data.shape
 
     plt.plot(data[:, 0], color='black')
-    plt.plot(data[:, 1:nModels])
+    plt.plot(data[:, 1:nModels], color='green')
+    plt.plot(data[:, 3], color='red')
     plt.show()
 
 

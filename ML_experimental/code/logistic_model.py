@@ -131,7 +131,7 @@ class logReg:
                 within = False
       
     
-        print ("Training model via private SGD.")
+        #print ("Training model via private SGD.")
         # Parameters of the Optimization
         optTol = 1e-2
 
@@ -157,7 +157,7 @@ class logReg:
         #sampler.run_mcmc(pos, 1000)
         sampler.run_mcmc(pos, 1000, rstate0=state)
         
-        print("Mean acceptance fraction:", np.mean(sampler.acceptance_fraction))
+        #print("Mean acceptance fraction:", np.mean(sampler.acceptance_fraction))
         #print("Autocorrelation time:", sampler.get_autocorr_time())
         
         sample = sampler.flatchain
@@ -203,7 +203,7 @@ class logReg:
 
     def sgd_fit(self, theta, batch_size=0, *args):
 
-        print ("Training model via SGD.")
+        #print ("Training model via SGD.")
 
         # Parameters of the Optimization
         optTol = 1e-2

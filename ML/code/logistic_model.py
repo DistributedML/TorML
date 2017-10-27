@@ -11,15 +11,17 @@ X = 0
 y = 0
 iteration = 1
 alpha = 1e-2
-epsilon = 1
 d = 0
 hist_grad = 0
+epsilon = 0
 
 scale = True
-diffpriv = False
+diffpriv = True
 
-def init(dataset):
 
+def init(dataset, epsilon):
+
+    passedEpsilon = epsilon
     data = utils.load_dataset(dataset)
 
     global X
@@ -37,21 +39,20 @@ def init(dataset):
     global samples
     samples = []
 
-    def lnprob(x,alpha):
-        return -(alpha/2)*np.linalg.norm(x)
-        
-    nwalkers = 10 * d
-    sampler = emcee.EnsembleSampler(nwalkers, d, lnprob, args=[epsilon])
-    
+    def lnprob(x, alpha):
+        return -(alpha / 2) * np.linalg.norm(x)
+
+    nwalkers = max(4 * d, 250)
+    sampler = emcee.EnsembleSampler(nwalkers, d, lnprob, args=[passedEpsilon])
+
     p0 = [np.random.rand(d) for i in range(nwalkers)]
-    pos, _, state = sampler.run_mcmc(p0,100)
+    pos, _, state = sampler.run_mcmc(p0, 100)
 
     sampler.reset()
     sampler.run_mcmc(pos, 1000, rstate0=state)
-    
+
     print("Mean acceptance fraction:", np.mean(sampler.acceptance_fraction))
-    #print("Autocorrelation time:", sampler.get_autocorr_time())
-    
+
     samples = sampler.flatchain
 
     return d
@@ -66,9 +67,10 @@ def funObj(ww, X, y, batch_size):
     # Calculate the gradient value
     res = - y / np.exp(np.logaddexp(0, yXw))
     if scale:
-        g = (1/batch_size)*X.T.dot(res)/max(1, np.linalg.norm(X.T.dot(res))) + lammy * ww
+        g = (1 / batch_size) * X.T.dot(res) / \
+            max(1, np.linalg.norm(X.T.dot(res))) + lammy * ww
     else:
-        g = (1/batch_size)*X.T.dot(res) + lammy * ww
+        g = (1 / batch_size) * X.T.dot(res) + lammy * ww
 
     return f, g
 
@@ -92,24 +94,11 @@ def privateFun(theta, ww, batch_size=0):
 
     f, g = funObj(ww, X[idx, :], y[idx], batch_size)
 
-    # Batch averaging
-    if batch_size > 0 and batch_size < nn:
-        g = g / batch_size
-
-    # AdaGrad
-    # global hist_grad
-    # hist_grad += g**2
-
-    #ada_grad = g / (1e-6 + np.sqrt(hist_grad))
-
-    # Determine the actual step magnitude
-    #delta = -alpha * ada_grad
-
     d1, _ = samples.shape
 
     if diffpriv:
         Z = samples[np.random.randint(0, d1)]
-        delta = -alpha * (g + (1/batch_size) * Z)
+        delta = -alpha * (g + (1 / batch_size) * Z)
     else:
         delta = -alpha * g
 
