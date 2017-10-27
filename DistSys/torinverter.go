@@ -132,7 +132,7 @@ func main() {
   	
   	sendGradMessage(logger, torDialer, pulledGradient, true)
 
-  	for i := 0; i <= 3000; i++ { 
+  	for i := 0; i <= 2000; i++ { 
     	sendGradMessage(logger, torDialer, pulledGradient, false)
     	if i % 100 == 0 {
     		writeModel(victimModel)
@@ -421,6 +421,27 @@ func sendJoinMessage(logger *govec.GoLog, torDialer proxy.Dialer) int {
 	conn.Close()
 
 	return reply
+
+}
+
+func oneFakeGradientStep(globalW []float64) ([]float64, error) {
+	
+	modelDiff := make([]float64, numFeatures)
+
+	for i := 0; i < len(globalW); i++ {
+	
+		// Perform the inversion
+		modelDiff[i] = (globalW[i] - myLastModel[i])
+
+		if myLastModel[i] != 0 {
+			victimModel[i] += (globalW[i] - myLastModel[i])
+		}
+		
+		myLastModel[i] = globalW[i]
+	}
+
+	goFloatArray := make([]float64, numFeatures)
+	return goFloatArray, nil
 
 }
 

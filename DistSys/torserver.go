@@ -407,6 +407,9 @@ func gradientWorker(nodeId string,
 
 		if modelExists {
 
+			// random sleeps from 0 - 1 ms
+			time.Sleep(time.Duration(1000 * rand.Float64()) * time.Millisecond)
+
 			mutex.Lock()
 
 			_, clientExists := myModels[modelId].Clients[puzzleKey]

@@ -87,7 +87,7 @@ def load_dataset(dataset_name):
 
     elif dataset_name == "credit":
 
-        df = pd.read_csv(os.path.join('../', "data", 'creditcard.csv'))
+        df = pd.read_csv(os.path.join('../ML', "data", 'creditcard.csv'))
         nn, dd = df.shape
 
         # Need to remove the first column and first row
