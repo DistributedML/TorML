@@ -407,8 +407,8 @@ func gradientWorker(nodeId string,
 
 		if modelExists {
 
-			// random sleeps from 0 - 1 ms
-			time.Sleep(time.Duration(1000 * rand.Float64()) * time.Millisecond)
+			// random sleeps from 0 - 0.5 ms
+			time.Sleep(time.Duration(500 * rand.Float64()) * time.Millisecond)
 
 			mutex.Lock()
 

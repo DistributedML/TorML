@@ -1,26 +1,33 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import pylab
 
 if __name__ == "__main__":
 
-    data1 = np.loadtxt("lossflush_10_nt.csv", delimiter=',')
-    data2 = np.loadtxt("lossflush_50_nt.csv", delimiter=',')
-    data3 = np.loadtxt("lossflush_100_nt.csv", delimiter=',')
-    data4 = np.loadtxt("lossflush_200_nt.csv", delimiter=',')
+    # data1 = np.loadtxt("lossflush_10_nt.csv", delimiter=',')
+    # data2 = np.loadtxt("lossflush_50_nt.csv", delimiter=',')
+    # data3 = np.loadtxt("lossflush_100_nt.csv", delimiter=',')
+    # data4 = np.loadtxt("lossflush_200_nt.csv", delimiter=',')
+    data5 = np.loadtxt("loss_e1_fp.csv", delimiter=',')
+    data6 = np.loadtxt("loss_e5_fp.csv", delimiter=',')
 
-    pylab.plot(data1, color="black", label="10 clients")
-    pylab.plot(data2, color="red", label="50 clients")
-    pylab.plot(data3, color="orange", label="100 clients")
-    pylab.plot(data4, color="green", label="200 clients")
+    fig, ax = plt.subplots()
 
-    pylab.legend(loc='upper right')
+    plt.plot(data5, color="black", label=r'$\varepsilon$ = 1', lw=5)
+    plt.plot(data6, color="red", label=r'$\varepsilon$ = 5', lw=5)
+    # plt.plot(data3, color="orange", label="100 clients", lw=5)
+    # plt.plot(data4, color="green", label="200 clients", lw=5)
 
-    #pylab.xticks(np.arange(0, 400, 10.0))
+    plt.legend(loc='upper right')
 
-    pylab.title("Convergence over time, varying number of clients")
-    pylab.xlabel("Time (s)")
-    pylab.ylabel("Training Error")
+    plt.xlabel("Time (s)")
+    plt.ylabel("Training Error")
 
-    pylab.show()
+    plt.legend(loc='upper right', ncol=4, fontsize=18)
 
+    plt.xlabel("Time (s)", fontsize=18)
+    plt.ylabel("Training Error", fontsize=18)
+
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+
+    plt.show()
