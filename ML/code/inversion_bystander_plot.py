@@ -6,8 +6,8 @@ import pdb
 
 if __name__ == "__main__":
 
-    top_path = "inversion_bystander_results/victimModel_"
-    csv = "b.csv"
+    top_path = "inversion_results/badVictimModel_"
+    csv = ".csv"
 
     width = 0.25
     ind = np.arange(4)
@@ -23,26 +23,42 @@ if __name__ == "__main__":
 
     for by in range(4):
 
-        temp = ""
+        # NO DP
         data = np.array([1.0, 2.0, 3.0])
 
         for i in range(3):
 
-            temp += str(by)
-            data[i] = inversion_compare.compare(top_path + temp + csv)
+            data[i] = inversion_compare.compare(top_path + str(by) +
+                                                "b_" + str(i + 1) + csv)
 
         means_no_dp[by] = np.mean(data)
         std_no_dp[by] = np.std(data)
 
-        means_e1[by] = inversion_compare.compare(top_path + str(by) + "b_1e.csv")
-        std_e1[by] = 0
+        # 1-DP
+        data = np.array([1.0, 2.0, 3.0])
 
-        means_e5[by] = inversion_compare.compare(top_path + str(by) + "b_5e.csv")
-        std_e5[by] = 0
+        for i in range(3):
+
+            data[i] = inversion_compare.compare(top_path + str(by) +
+                                                "b_1e_" + str(i + 1) + csv)
+
+        means_e1[by] = np.mean(data)
+        std_e1[by] = np.std(data)
+
+        # 5-DP
+        data = np.zeros(3)
+
+        for i in range(3):
+
+            data[i] = inversion_compare.compare(top_path + str(by) +
+                                                "b_5e_" + str(i) + ".csv")
+
+        means_e5[by] = np.mean(data)
+        std_e5[by] = np.std(data)
 
     fig, ax = plt.subplots()
 
-    rects1 = plt.bar([p for p in ind], 
+    rects1 = plt.bar([p for p in ind],
                      means_no_dp, width,
                      color='green',
                      yerr=std_no_dp,
@@ -54,7 +70,7 @@ if __name__ == "__main__":
                      yerr=std_e1,
                      label=r'$\varepsilon$ = 1')
 
-    rects3 = plt.bar([p + 2 * width for p in ind], 
+    rects3 = plt.bar([p + 2 * width for p in ind],
                      means_e5, width,
                      color='red',
                      yerr=std_e5,

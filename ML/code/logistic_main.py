@@ -17,8 +17,8 @@ if __name__ == "__main__":
     outputName = "victimBlank.csv"
 
     batch_size = 10
-    iterations = 5000
-    epsilon = 10
+    iterations = 4000
+    epsilon = 5
 
     # Global
     numFeatures = logistic_model.init(dataset, epsilon=epsilon)
