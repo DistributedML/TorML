@@ -18,8 +18,8 @@ if __name__ == "__main__":
     plt.errorbar(idx + 0.05, np.median(datawo, axis=0), yerr=np.std(datawo, axis=0), 
         label="without attacker gradient", lw=5)
 
-    plt.ylabel("Reconstuction Error", fontsize=18)
-    plt.xlabel(r'privacy parameter $\varepsilon$', fontsize=18)
+    plt.ylabel("Reconstuction Error", fontsize=22)
+    plt.xlabel(r'privacy parameter $\varepsilon$', fontsize=22)
 
     plt.legend(loc='upper right', fontsize=18)
 

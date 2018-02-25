@@ -21,10 +21,25 @@ if __name__ == "__main__":
     means_e5 = np.zeros(4)
     std_e5 = np.zeros(4)
 
+    # means_no_dp[0] = inversion_compare.compare(top_path + str(0) +
+    #                                             "b_1" + csv)
+
+    # means_e1[0] = inversion_compare.compare(top_path + str(0) +
+    #                                             "b_1e_1" + csv)
+    
+
+    # means_e5[0] = inversion_compare.compare(top_path + str(0) +
+    #                                             "b_5e_1" + csv)
+    
+    
+    # std_no_dp[0] = 0
+    # std_e1[0] = 0
+    # std_e5[0] = 0
+
     for by in range(4):
 
         # NO DP
-        data = np.array([1.0, 2.0, 3.0])
+        data = np.zeros(3)
 
         for i in range(3):
 
@@ -35,7 +50,7 @@ if __name__ == "__main__":
         std_no_dp[by] = np.std(data)
 
         # 1-DP
-        data = np.array([1.0, 2.0, 3.0])
+        data = np.zeros(3)
 
         for i in range(3):
 
@@ -51,7 +66,7 @@ if __name__ == "__main__":
         for i in range(3):
 
             data[i] = inversion_compare.compare(top_path + str(by) +
-                                                "b_5e_" + str(i) + ".csv")
+                                                "b_5e_" + str(i+1) + ".csv")
 
         means_e5[by] = np.mean(data)
         std_e5[by] = np.std(data)
@@ -59,29 +74,29 @@ if __name__ == "__main__":
     fig, ax = plt.subplots()
 
     rects1 = plt.bar([p for p in ind],
+                     means_e1, width,
+                     color='red',
+                     yerr=std_e1,
+                     label=r'$\varepsilon$ = 1')
+
+    rects2 = plt.bar([p + width for p in ind],
+                     means_e5, width,
+                     color='orange',
+                     yerr=std_e5,
+                     label=r'$\varepsilon$ = 5')
+
+    rects3 = plt.bar([p + 2 * width for p in ind],
                      means_no_dp, width,
                      color='green',
                      yerr=std_no_dp,
                      label='No Privacy')
 
-    rects2 = plt.bar([p + width for p in ind],
-                     means_e1, width,
-                     color='orange',
-                     yerr=std_e1,
-                     label=r'$\varepsilon$ = 1')
-
-    rects3 = plt.bar([p + 2 * width for p in ind],
-                     means_e5, width,
-                     color='red',
-                     yerr=std_e5,
-                     label=r'$\varepsilon$ = 5')
-
     plt.ylabel("Reconstuction Error", fontsize=18)
-    plt.xlabel("# of bystanders", fontsize=18)
+    plt.xlabel("# of bystanders (k-2)", fontsize=18)
 
     plt.xticks(ind + width, ('0', '1', '2', '3'))
     plt.yticks()
-    plt.legend(loc='upper left', fontsize=18)
+    plt.legend(loc='best', ncol=3, fontsize=18)
 
     axes = plt.gca()
     axes.set_ylim([0, 1])

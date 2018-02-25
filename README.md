@@ -29,8 +29,11 @@ On server machine:
 `go run torserver.go`
 
 On client machines:  
-`go run torcurator.go c1 studyName`  
-`go run torclient.go h1 studyName dataFile`  
-`go run torclient.go h2 studyName dataFile`  
+`go run torcurator.go curatorName studyName`
+`go run torclient.go node1 studyName datasetName epsilon isLocal`
+`go run torclient.go node2 studyName datasetName epsilon isLocal`
+`go run torclient.go node3 studyName datasetName epsilon isLocal`
 
-A good test set is the credit dataset.
+A good test set is the credit dataset: 
+studyName = 'study'
+and use: credit1, credit2, creditbad.... etc.

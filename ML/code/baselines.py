@@ -13,7 +13,7 @@ if __name__ == "__main__":
     nn = X.shape[0]
 
     # Sample n points with replacement from n examples
-    bootsample = np.random.choice(nn, 200 * nn)
+    bootsample = np.random.choice(nn, 10 * nn)
     Xboot = X[bootsample, :]
     yboot = y[bootsample]
 
