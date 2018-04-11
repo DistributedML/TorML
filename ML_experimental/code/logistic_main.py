@@ -8,7 +8,7 @@ from sklearn.svm import LinearSVC
 import numpy as np
 
 # Load Binary and Multi -class data
-data = utils.load_dataset("logisticData")
+data = utils.load_dataset("creditcard")
 XBin, yBin = data['X'], data['y']
 XBinValid, yBinValid = data['Xvalid'], data['yvalid']
 

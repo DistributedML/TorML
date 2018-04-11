@@ -5,7 +5,9 @@ import (
 	"crypto/sha256"
 	"encoding/csv"
 	"encoding/hex"
+	"encoding/binary"
 	"fmt"
+	"math"
 	"math/rand"
 	"net"
 	"net/http"
@@ -48,6 +50,9 @@ type Model struct {
 	NumFeatures 		int
 	GlobalWeights 		[]float64
 
+	TempGradients		map[int][]float64
+	TempGradientNextID	int
+
 	// Bookkeeping
 	Puzzles				map[string]string
 	Clients 	 		map[string]ClientState
@@ -86,6 +91,9 @@ var (
 	pyRoniFunc    *python.PyObject
 	pyPlotFunc    *python.PyObject
 
+	pyAggModule   *python.PyObject
+	pyKrumFunc    *python.PyObject
+	
 )
 
 /*
@@ -185,7 +193,10 @@ func pyInit() {
 	python.PyList_Insert(sysPath, 0, python.PyString_FromString("./"))
 	python.PyList_Insert(sysPath, 0, python.PyString_FromString("../ML/code"))
 
+	pyAggModule = python.PyImport_ImportModule("logistic_aggregator")
 	pyTestModule = python.PyImport_ImportModule("logistic_model_test")
+	
+	pyKrumFunc = pyAggModule.GetAttrString("krum")
 	pyTrainFunc = pyTestModule.GetAttrString("train_error")
 	pyTestFunc = pyTestModule.GetAttrString("test_error")
 	pyRoniFunc = pyTestModule.GetAttrString("roni")
@@ -276,19 +287,6 @@ func lossFlush() {
 	mutex.Lock()
 	st := strings.Fields(strings.Trim(fmt.Sprint(lossProgress), "[]"))
 	writer.Write(st)
-
-	/*
-
-	UNUSED GO PYTHON CODE. IT DOESNT WORK 
-	plotArray := python.PyList_New(len(lossProgress))
-
-	for i := 0; i < len(lossProgress); i++ {
-		python.PyList_SetItem(plotArray, i, python.PyFloat_FromDouble(lossProgress[i]))
-	}
-
-	isPlotted := pyPlotFunc.CallFunction(plotArray)
-	fmt.Println(python.PyFloat_AsDouble(isPlotted))*/
-
 	mutex.Unlock()
 
 }
@@ -402,15 +400,15 @@ func gradientWorker(nodeId string,
 		puzzleKey := inData.Key
 		modelId := inData.ModelId
 
+		// random sleeps from 0 - 0.5 ms
+		time.Sleep(time.Duration(500 * rand.Float64()) * time.Millisecond)
+		
+		mutex.Lock()
+
 		_, modelExists := myModels[modelId]
 		bufferReply := make([]float64, 0)
 
 		if modelExists {
-
-			// random sleeps from 0 - 0.5 ms
-			time.Sleep(time.Duration(500 * rand.Float64()) * time.Millisecond)
-
-			mutex.Lock()
 
 			_, clientExists := myModels[modelId].Clients[puzzleKey]
 			enoughClients := len(myModels[modelId].Clients) >= myModels[modelId].MinClients
@@ -440,8 +438,9 @@ func gradientWorker(nodeId string,
 				myModels[modelId].Clients[puzzleKey] = clientState
 			} 
 
-			mutex.Unlock()
 		} 
+
+		mutex.Unlock()
 
 		outBuf = Logger.PrepareSend("Replying...", bufferReply)
 	  	conn.Write(outBuf)
@@ -490,7 +489,9 @@ func startModel(modelId string, numFeatures int, minClients int) bool {
 	newModel.NumFeatures = numFeatures
 	newModel.GlobalWeights = newRandomModel(numFeatures)
 	newModel.MinClients = minClients
-	
+	newModel.TempGradients = make(map[int][]float64)
+	newModel.TempGradientNextID = 0
+
 	mutex.Lock()
 	myModels[modelId] = newModel
 	mutex.Unlock()
@@ -591,92 +592,108 @@ func processJoin(modelId string, givenKey string, numFeatures int) bool {
 }
 
 
-func gradientUpdate(puzzleKey string, modelId string, deltas []float64) bool {
+func gradientUpdate(puzzleKey string, modelId string, deltas []float64) {
 
-	_, exists := myModels[modelId]
-	if exists {
 
-		_, exists = myModels[modelId].Clients[puzzleKey]
-		
-		// Add in the deltas
-		if exists { 
+	theModel := myModels[modelId]
+	clientState := theModel.Clients[puzzleKey]
 
-			theModel := myModels[modelId]
-			clientState := theModel.Clients[puzzleKey]
+	if clientState.IsComputingLocal {
 
-			if clientState.IsComputingLocal {
+		// Just update the local copy of the model
+		validator := myValidators[modelId]
+		validatorWeights := validator.ClientResponses[puzzleKey]
 
-				// Just update the local copy of the model
-				validator := myValidators[modelId]
-				validatorWeights := validator.ClientResponses[puzzleKey]
-
-				for j := 0; j < len(deltas); j++ {
-					validatorWeights[j] = deltas[j]
-					clientState.Weights[j] += deltas[j]
-				}
-
-				validator.ClientResponses[puzzleKey] = validatorWeights
-				validator.NumResponses++
-				clientState.NumValidations++
-				myValidators[modelId] = validator
-				fmt.Printf("Validation update from %.5s on %s \n", puzzleKey, modelId)
-
-				scoreMap := make(map[string]float64)
-				isMulticast := false
-				if validator.NumResponses >= len(validator.ClientResponses) {
-					scoreMap = runValidation(modelId)
-					isMulticast = true
-					delete(myValidators, modelId) 
-				}
-
-				// Revert the client state
-				clientState.IsComputingLocal = false
-				theModel.Clients[puzzleKey] = clientState
-
-				// Add all the multicast scores
-				if isMulticast {
-					
-					for node, roni := range scoreMap {
-						roniClientState := theModel.Clients[node]
-						roniClientState.OutlierScore += roni
-						theModel.Clients[node] = roniClientState
-
-						if roniClientState.OutlierScore < THRESHOLD {
-							fmt.Printf("node %.5s has RONI %5f past THRESHOLD. KICKED! \n", node, roniClientState.OutlierScore)
-							delete(theModel.Clients, node)
-							delete(theModel.Puzzles, node)
-						}
-					}   
-
-					//fmt.Printf("Finished updating validation. There are now %d left.\n",
-					//	len(theModel.Clients))
-
-				}
-
-				myModels[modelId] = theModel
-
-			} else {
-
-				// Update the global model
-				for j := 0; j < len(deltas); j++ {
-					theModel.GlobalWeights[j] += deltas[j]
-				}
-				
-				clientState.NumIterations++
-
-				theModel.Clients[puzzleKey] = clientState
-				myModels[modelId] = theModel
-				fmt.Printf("Grad update from %.5s on %s \n", puzzleKey, modelId)
-							
-			}
-
-		} else {
-			fmt.Printf("Client %.5s is not in this model.\n", puzzleKey)
+		for j := 0; j < len(deltas); j++ {
+			validatorWeights[j] = deltas[j]
+			clientState.Weights[j] += deltas[j]
 		}
 
+		validator.ClientResponses[puzzleKey] = validatorWeights
+		validator.NumResponses++
+		clientState.NumValidations++
+		myValidators[modelId] = validator
+		fmt.Printf("Validation update from %.5s on %s \n", puzzleKey, modelId)
+
+		scoreMap := make(map[string]float64)
+		isMulticast := false
+		if validator.NumResponses >= len(validator.ClientResponses) {
+			scoreMap = runValidation(modelId)
+			isMulticast = true
+			delete(myValidators, modelId) 
+		}
+
+		// Revert the client state
+		clientState.IsComputingLocal = false
+		theModel.Clients[puzzleKey] = clientState
+
+		// Add all the multicast scores
+		if isMulticast {
+			
+			for node, roni := range scoreMap {
+				roniClientState := theModel.Clients[node]
+				roniClientState.OutlierScore += roni
+				theModel.Clients[node] = roniClientState
+
+				if roniClientState.OutlierScore < THRESHOLD {
+					fmt.Printf("node %.5s has RONI %5f past THRESHOLD. KICKED! \n", node, roniClientState.OutlierScore)
+					delete(theModel.Clients, node)
+					delete(theModel.Puzzles, node)
+				}
+			}   
+		}
+
+		myModels[modelId] = theModel
+
+	} else {
+
+		// store the updates as they come
+		if theModel.TempGradientNextID == theModel.MinClients {
+			
+			dd := len(deltas)
+
+			// Copy the map to a dgx1 vector
+			pyAllDeltas := python.PyList_New(dd * theModel.MinClients)
+			
+			for g := 0; g < theModel.MinClients; g++ {
+				for i := 0; i < dd; i++ {
+					python.PyList_SetItem(pyAllDeltas, (g * dd) + i, 
+						python.PyFloat_FromDouble(theModel.TempGradients[g][i]))
+				}
+			}
+
+			// Either use full GD or SGD here
+			pyKrumIdx := pyKrumFunc.CallFunction(pyAllDeltas, 
+				python.PyInt_FromLong(len(deltas)), 
+				python.PyInt_FromLong(theModel.MinClients))
+
+			krumIdx := python.PyInt_AsLong(pyKrumIdx)
+
+			// Update the global model
+			for j := 0; j < dd; j++ {
+				theModel.GlobalWeights[j] += theModel.TempGradients[krumIdx][j]
+			}
+
+			myModels[modelId] = theModel
+			fmt.Printf("Krum update using idx %d from %.5s on %s \n", 
+				krumIdx, puzzleKey, modelId)
+
+			theModel.TempGradients = make(map[int][]float64)
+			theModel.TempGradientNextID = 0
+
+		} else {
+			theModel.TempGradients[theModel.TempGradientNextID] = deltas
+			theModel.TempGradientNextID++
+		}
+		
+		clientState.NumIterations++
+		theModel.Clients[puzzleKey] = clientState
+		myModels[modelId] = theModel
+		fmt.Printf("Grad update from %.5s on %s \n", puzzleKey, modelId)
+					
 	}
 
-	return exists
+	return
 }
 
 func runValidation(modelId string) map[string]float64 {
@@ -799,6 +816,26 @@ func newRandomModel(numFeatures int) []float64 {
 	}
 
 	return model
+}
+
+func pythonToGoFloatArray(result *python.PyObject) []float64 {
+
+	// Convert the resulting array to a go byte array
+	pyByteArray := python.PyByteArray_FromObject(result)
+	goByteArray := python.PyByteArray_AsBytes(pyByteArray)
+
+	var goFloatArray []float64
+	size := len(goByteArray) / 8
+
+	for i := 0; i < size; i++ {
+		currIndex := i * 8
+		bits := binary.LittleEndian.Uint64(goByteArray[currIndex : currIndex+8])
+		aFloat := math.Float64frombits(bits)
+		goFloatArray = append(goFloatArray, aFloat)
+	}
+
+	return goFloatArray
+
 }
 
 // Error checking function
