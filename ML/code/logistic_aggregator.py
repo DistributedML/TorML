@@ -4,22 +4,27 @@ import pdb
 import falconn
 
 
-def setup_falconn(full_deltas):
+def lsh_sieve(full_deltas, d, n):
 
-    n, d = full_deltas.shape
+    deltas = np.reshape(full_deltas, (n, d))
+    centred_deltas = (deltas - np.mean(deltas, axis=0))
 
     params = falconn.get_default_parameters(n, d)
     fln = falconn.LSHIndex(params)
-    fln.setup(full_deltas)
+    fln.setup(centred_deltas)
     qob = fln.construct_query_object()
 
-    # Get the k nearest
-    # qob.find_k_nearest_neighbors(full_deltas[0], 5)
+    # Greedy merge within a distance
+    # all_sets = list()
 
-    # Within a distance threshold
+    full_grad = np.zeros(d)
+
     for i in range(n):
-        num_neighbors = qob.find_near_neighbors(full_deltas[i], 1.0 / d)
-        print str(i) + " has " + str(num_neighbors)
+        neighbors = qob.find_near_neighbors(centred_deltas[i], 1.0 / d)
+        # print str(i) + " has " + str(neighbors)
+        full_grad = full_grad + (deltas[i] / len(neighbors))
+
+    return full_grad
 
 
 # Returns the index of the row that should be used in Krum
@@ -46,5 +51,9 @@ def get_krum_scores(X, groupsize):
 
 if __name__ == "__main__":
 
-    sample = np.random.rand(50, 5)
-    setup_falconn(sample)
+    good = (np.random.rand(50, 5) - 0.5) * 2
+    attackers = np.random.rand(10, 5) + 0.5
+
+    sample = np.vstack((good, attackers))
+
+    lsh_sieve(sample.flatten(), 5, 60)

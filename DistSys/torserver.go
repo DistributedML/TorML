@@ -93,6 +93,7 @@ var (
 
 	pyAggModule   *python.PyObject
 	pyKrumFunc    *python.PyObject
+	pyLshFunc     *python.PyObject
 	
 )
 
@@ -196,6 +197,7 @@ func pyInit() {
 	pyAggModule = python.PyImport_ImportModule("logistic_aggregator")
 	pyTestModule = python.PyImport_ImportModule("logistic_model_test")
 	
+	pyLshFunc = pyAggModule.GetAttrString("lsh_sieve")
 	pyKrumFunc = pyAggModule.GetAttrString("krum")
 	pyTrainFunc = pyTestModule.GetAttrString("train_error")
 	pyTestFunc = pyTestModule.GetAttrString("test_error")
@@ -662,6 +664,20 @@ func gradientUpdate(puzzleKey string, modelId string, deltas []float64) {
 				}
 			}
 
+			pyTotalUpdate := pyLshFunc.CallFunction(pyAllDeltas, 
+				python.PyInt_FromLong(len(deltas)), 
+				python.PyInt_FromLong(theModel.MinClients))
+
+			total_update := pythonToGoFloatArray(pyTotalUpdate)
+
+			// Update the global model
+			for j := 0; j < dd; j++ {
+				theModel.GlobalWeights[j] += total_update[j]
+			}
+
+			/*
+			krumIdx := python.PyInt_AsLong(pyKrumIdx)
+
 			// Either use full GD or SGD here
 			pyKrumIdx := pyKrumFunc.CallFunction(pyAllDeltas, 
 				python.PyInt_FromLong(len(deltas)), 
@@ -673,11 +689,13 @@ func gradientUpdate(puzzleKey string, modelId string, deltas []float64) {
 			for j := 0; j < dd; j++ {
 				theModel.GlobalWeights[j] += theModel.TempGradients[krumIdx][j]
 			}
-
-			myModels[modelId] = theModel
+			
 			fmt.Printf("Krum update using idx %d from %.5s on %s \n", 
 				krumIdx, puzzleKey, modelId)
 
+			*/
+
+			myModels[modelId] = theModel
 			theModel.TempGradients = make(map[int][]float64)
 			theModel.TempGradientNextID = 0
 
