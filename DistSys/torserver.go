@@ -79,6 +79,7 @@ var (
 	myModels 			map[string]Model
 	myValidators	 	map[string]Validator
 
+    // Inverse rate of multicast. Set to > 1 if you want to disable
 	MULTICAST_RATE		float64 = 1.1
 	
 	// Kick a client out after 2% of RONI
@@ -194,9 +195,12 @@ func pyInit() {
 	python.PyList_Insert(sysPath, 0, python.PyString_FromString("./"))
 	python.PyList_Insert(sysPath, 0, python.PyString_FromString("../ML/code"))
 
-	pyAggModule = python.PyImport_ImportModule("logistic_aggregator")
-	pyTestModule = python.PyImport_ImportModule("logistic_model_test")
+	// pyAggModule = python.PyImport_ImportModule("logistic_aggregator")
+	// pyTestModule = python.PyImport_ImportModule("logistic_model_test")
 	
+    pyAggModule = python.PyImport_ImportModule("logistic_aggregator")
+    pyTestModule = python.PyImport_ImportModule("softmax_model_test")
+
 	pyLshFunc = pyAggModule.GetAttrString("lsh_sieve")
 	pyKrumFunc = pyAggModule.GetAttrString("krum")
 	pyTrainFunc = pyTestModule.GetAttrString("train_error")
@@ -384,8 +388,8 @@ func gradientWorker(nodeId string,
 	ln, err := net.ListenTCP("tcp", myaddr)
 	checkError(err)
 
-	buf := make([]byte, 2048)
-	outBuf := make([]byte, 2048)
+	buf := make([]byte, 65536)
+	outBuf := make([]byte, 65536)
 	fmt.Printf("Listening for TCP....\n")
 
 	for {
@@ -466,11 +470,11 @@ func testModel(model Model, node string) (float64, float64) {
 		python.PyList_SetItem(argArray, i, python.PyFloat_FromDouble(weights[i]))
 	}
 
+    pyTrainResult := pyTrainFunc.CallFunction(argArray)
+    trainErr := python.PyFloat_AsDouble(pyTrainResult)
+
 	pyTestResult := pyTestFunc.CallFunction(argArray)
 	testErr := python.PyFloat_AsDouble(pyTestResult)
-
-	pyTrainResult := pyTrainFunc.CallFunction(argArray)
-	trainErr := python.PyFloat_AsDouble(pyTrainResult)
 	
 	return trainErr, testErr
 }
@@ -596,7 +600,6 @@ func processJoin(modelId string, givenKey string, numFeatures int) bool {
 
 func gradientUpdate(puzzleKey string, modelId string, deltas []float64) {
 
-
 	theModel := myModels[modelId]
 	clientState := theModel.Clients[puzzleKey]
 
@@ -700,8 +703,24 @@ func gradientUpdate(puzzleKey string, modelId string, deltas []float64) {
 			theModel.TempGradientNextID = 0
 
 		} else {
-			theModel.TempGradients[theModel.TempGradientNextID] = deltas
-			theModel.TempGradientNextID++
+			
+            useLSH := false
+
+            if useLSH {
+                
+                theModel.TempGradients[theModel.TempGradientNextID] = deltas
+                theModel.TempGradientNextID++
+
+            } else {
+                
+                dd := len(deltas)
+
+                // Update the global model
+                for j := 0; j < dd; j++ {
+                    theModel.GlobalWeights[j] += deltas[j]
+                }
+            }   
+
 		}
 		
 		clientState.NumIterations++
@@ -830,7 +849,7 @@ func newRandomModel(numFeatures int) []float64 {
 
 	model := make([]float64, numFeatures)
 	for i := 0; i < numFeatures; i++ {
-		model[i] = rand.Float64()
+		model[i] = rand.Float64() / 1000.0
 	}
 
 	return model

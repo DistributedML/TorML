@@ -55,7 +55,7 @@ def bootstrap(numSets, dataset):
             str(i + 1) + "_b.csv", dataslice, delimiter=",")
 
 
-def load_dataset(dataset_name):
+def load_dataset(dataset_name, npy=False):
 
     # Load and standardize the data and add the bias term
     if dataset_name == "logisticData":
@@ -99,7 +99,7 @@ def load_dataset(dataset_name):
 
         idx = np.arange(nn)
         data = credit[idx, :].astype(float)
-        
+
         split = int(nn * 0.70)
         X = data[0:split, :]
         y = datay[0:split]
@@ -217,15 +217,24 @@ def load_dataset(dataset_name):
 
         # This is the main section typically called by the tor client.
         # Thus we have hardcoded an absolute path from that location
-        data = pd.read_csv(os.path.join('../ML', "data", dataset_name + '.csv'))
-        d = data.shape[1]
 
-        data = data.as_matrix()
+        if npy:
+
+            data = np.load(os.path.join('../ML', "data", dataset_name + '.npy'))
+            n, d = data.shape
+
+        else:
+
+            data = pd.read_csv(os.path.join('../', "data", dataset_name + '.csv'))
+            d = data.shape[1]
+
+            data = data.as_matrix()
 
         X = data[:, 0:d - 1]
         y = data[:, -1]
 
         return {"X": X, "y": y}
+
 
 def normalize_rows(X):
 
