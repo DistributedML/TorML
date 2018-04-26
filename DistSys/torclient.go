@@ -258,7 +258,7 @@ func sendGradMessage(logger *govec.GoLog,
 			continue
 		}
 		
-		inBuf := make([]byte, 65536)
+		inBuf := make([]byte, 131072)
 		n, errRead := conn.Read(inBuf)
 		if errRead != nil {
 			fmt.Println("Got a reply read failure, retrying...")

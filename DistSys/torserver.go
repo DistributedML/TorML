@@ -389,8 +389,8 @@ func gradientWorker(nodeId string,
 	ln, err := net.ListenTCP("tcp", myaddr)
 	checkError(err)
 
-	buf := make([]byte, 65536)
-	outBuf := make([]byte, 65536)
+	buf := make([]byte, 131072)
+	outBuf := make([]byte, 131072)
 	fmt.Printf("Listening for TCP....\n")
 
 	for {
@@ -727,7 +727,7 @@ func gradientUpdate(puzzleKey string, modelId string, deltas []float64) {
 		clientState.NumIterations++
 		theModel.Clients[puzzleKey] = clientState
 		myModels[modelId] = theModel
-		fmt.Printf("Grad update from %.5s on %s \n", puzzleKey, modelId)
+		fmt.Printf("Grad update %d from %.5s on %s \n", clientState.NumIterations, puzzleKey, modelId)
 					
 	}
 
