@@ -250,15 +250,15 @@ func sendGradMessage(logger *govec.GoLog,
 		}
 
 		outBuf := logger.PrepareSend("Sending packet to torserver", msg)
-		
+
 		_, err = conn.Write(outBuf)
 		if err != nil {
 			fmt.Println("Got a conn write failure, retrying...")
 			conn.Close()
 			continue
 		}
-		
-		inBuf := make([]byte, 131072)
+
+		inBuf := make([]byte, 72000)
 		n, errRead := conn.Read(inBuf)
 		if errRead != nil {
 			fmt.Println("Got a reply read failure, retrying...")
