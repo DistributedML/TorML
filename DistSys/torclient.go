@@ -398,8 +398,6 @@ func sendJoinMessage(logger *govec.GoLog, torDialer proxy.Dialer) int {
 
 func oneGradientStep(globalW []float64) ([]float64, error) {
 	
-    fmt.Printf("Get global %d\n", len(globalW))
-
 	argArray := python.PyList_New(len(globalW))
 
 	for i := 0; i < len(globalW); i++ {
@@ -409,8 +407,6 @@ func oneGradientStep(globalW []float64) ([]float64, error) {
 	// Either use full GD or SGD here
 	result := pyLogPrivFunc.CallFunction(python.PyInt_FromLong(1), argArray,
 		python.PyInt_FromLong(10))
-	
-    fmt.Println("Got result")
 
 	// Convert the resulting array to a go byte array
 	pyByteArray := python.PyByteArray_FromObject(result)

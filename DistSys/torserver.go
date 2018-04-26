@@ -203,6 +203,7 @@ func pyInit() {
 
 	pyLshFunc = pyAggModule.GetAttrString("lsh_sieve")
 	pyKrumFunc = pyAggModule.GetAttrString("krum")
+    
 	pyTrainFunc = pyTestModule.GetAttrString("train_error")
 	pyTestFunc = pyTestModule.GetAttrString("test_error")
 	pyRoniFunc = pyTestModule.GetAttrString("roni")
@@ -407,7 +408,7 @@ func gradientWorker(nodeId string,
 		modelId := inData.ModelId
 
 		// random sleeps from 0 - 0.5 ms
-		time.Sleep(time.Duration(500 * rand.Float64()) * time.Millisecond)
+		time.Sleep(time.Duration(100 * rand.Float64()) * time.Millisecond)
 		
 		mutex.Lock()
 
