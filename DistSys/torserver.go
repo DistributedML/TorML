@@ -117,6 +117,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
     	trainError, testError := testModel(model, "global")
     	fmt.Fprintf(w, "Train Loss: %f\n", trainError)	
     	fmt.Fprintf(w, "Test Loss: %f\n", testError)
+        fmt.Fprintf(w, "Num Iterations: %d\n", model.NumIterations)
     	fmt.Fprintf(w, "Num Clients: %d\n", len(model.Clients))
 
     	for node, clientState := range model.Clients {
