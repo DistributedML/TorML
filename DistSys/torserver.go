@@ -50,13 +50,13 @@ type Model struct {
 	NumFeatures 		int
 	GlobalWeights 		[]float64
 
-	TempGradients		map[int][]float64
-	TempGradientNextID	int
+	TempGradients		map[string][]float64
 
 	// Bookkeeping
 	Puzzles				map[string]string
 	Clients 	 		map[string]ClientState
 	MinClients 			int
+    NumIterations       int
 }
 
 type Validator struct {
@@ -95,6 +95,7 @@ var (
 	pyAggModule   *python.PyObject
 	pyKrumFunc    *python.PyObject
 	pyLshFunc     *python.PyObject
+    pyAvgFunc     *python.PyObject
 	
 )
 
@@ -203,6 +204,7 @@ func pyInit() {
 
 	pyLshFunc = pyAggModule.GetAttrString("lsh_sieve")
 	pyKrumFunc = pyAggModule.GetAttrString("krum")
+    pyAvgFunc = pyAggModule.GetAttrString("average")
     
 	pyTrainFunc = pyTestModule.GetAttrString("train_error")
 	pyTestFunc = pyTestModule.GetAttrString("test_error")
@@ -496,8 +498,8 @@ func startModel(modelId string, numFeatures int, minClients int) bool {
 	newModel.NumFeatures = numFeatures
 	newModel.GlobalWeights = newRandomModel(numFeatures)
 	newModel.MinClients = minClients
-	newModel.TempGradients = make(map[int][]float64)
-	newModel.TempGradientNextID = 0
+	newModel.TempGradients = make(map[string][]float64)
+    newModel.NumIterations = 0
 
 	mutex.Lock()
 	myModels[modelId] = newModel
@@ -653,81 +655,84 @@ func gradientUpdate(puzzleKey string, modelId string, deltas []float64) {
 
 	} else {
 
-		// store the updates as they come
-		if theModel.TempGradientNextID == theModel.MinClients {
-			
-			dd := len(deltas)
+        synchronous := true
 
-			// Copy the map to a dgx1 vector
-			pyAllDeltas := python.PyList_New(dd * theModel.MinClients)
-			
-			for g := 0; g < theModel.MinClients; g++ {
-				for i := 0; i < dd; i++ {
-					python.PyList_SetItem(pyAllDeltas, (g * dd) + i, 
-						python.PyFloat_FromDouble(theModel.TempGradients[g][i]))
-				}
-			}
+        // Collect the update 
+        if synchronous {
 
-			pyTotalUpdate := pyLshFunc.CallFunction(pyAllDeltas, 
-				python.PyInt_FromLong(len(deltas)), 
-				python.PyInt_FromLong(theModel.MinClients))
+            theModel.TempGradients[puzzleKey] = deltas
+            fmt.Printf("Grad update from %.5s on %s \n", puzzleKey, modelId)
+            clientState.NumIterations++
+            theModel.Clients[puzzleKey] = clientState
 
-			total_update := pythonToGoFloatArray(pyTotalUpdate)
-
-			// Update the global model
-			for j := 0; j < dd; j++ {
-				theModel.GlobalWeights[j] += total_update[j]
-			}
-
-			/*
-			krumIdx := python.PyInt_AsLong(pyKrumIdx)
-
-			// Either use full GD or SGD here
-			pyKrumIdx := pyKrumFunc.CallFunction(pyAllDeltas, 
-				python.PyInt_FromLong(len(deltas)), 
-				python.PyInt_FromLong(theModel.MinClients))
-
-			krumIdx := python.PyInt_AsLong(pyKrumIdx)
-
-			// Update the global model
-			for j := 0; j < dd; j++ {
-				theModel.GlobalWeights[j] += theModel.TempGradients[krumIdx][j]
-			}
-			
-			fmt.Printf("Krum update using idx %d from %.5s on %s \n", 
-				krumIdx, puzzleKey, modelId)
-
-			*/
-
-			myModels[modelId] = theModel
-			theModel.TempGradients = make(map[int][]float64)
-			theModel.TempGradientNextID = 0
-
-		} else {
-			
-            useLSH := true
-
-            if useLSH {
-                
-                theModel.TempGradients[theModel.TempGradientNextID] = deltas
-                theModel.TempGradientNextID++
-
-            } else {
+            // store the updates as they come
+            if len(theModel.TempGradients) == theModel.MinClients {
                 
                 dd := len(deltas)
 
+                // Copy the map to a dgx1 vector
+                pyAllDeltas := python.PyList_New(dd * theModel.MinClients)
+                
+                g := 0
+                for cHash := range theModel.TempGradients {
+                    for i := 0; i < dd; i++ {
+                        python.PyList_SetItem(pyAllDeltas, (g * dd) + i, 
+                            python.PyFloat_FromDouble(theModel.TempGradients[cHash][i]))
+                    }
+                    g++
+                }
+
+                pyTotalUpdate := pyAvgFunc.CallFunction(pyAllDeltas, 
+                    python.PyInt_FromLong(len(deltas)), 
+                    python.PyInt_FromLong(theModel.MinClients))
+
+                total_update := pythonToGoFloatArray(pyTotalUpdate)
+
                 // Update the global model
                 for j := 0; j < dd; j++ {
-                    theModel.GlobalWeights[j] += deltas[j]
+                    theModel.GlobalWeights[j] += total_update[j]
                 }
-            }   
 
-		}
+                /*
+                USE THE KRUM FUNCTION
+                krumIdx := python.PyInt_AsLong(pyKrumIdx)
+
+                // Either use full GD or SGD here
+                pyKrumIdx := pyKrumFunc.CallFunction(pyAllDeltas, 
+                    python.PyInt_FromLong(len(deltas)), 
+                    python.PyInt_FromLong(theModel.MinClients))
+
+                krumIdx := python.PyInt_AsLong(pyKrumIdx)
+
+                // Update the global model
+                for j := 0; j < dd; j++ {
+                    theModel.GlobalWeights[j] += theModel.TempGradients[krumIdx][j]
+                }
+                
+                fmt.Printf("Krum update using idx %d from %.5s on %s \n", 
+                    krumIdx, puzzleKey, modelId)
+
+                */
+
+                theModel.NumIterations++
+                fmt.Printf("Grad update %d on %s \n", theModel.NumIterations, modelId)
+                theModel.TempGradients = make(map[string][]float64)
+                myModels[modelId] = theModel
+
+            } 
+
+        } else {
+        
+            // Asycnhronous, just apply the update
+            dd := len(deltas)
+
+            // Update the global model
+            for j := 0; j < dd; j++ {
+                theModel.GlobalWeights[j] += deltas[j]
+            }
+        }   
 		
-		clientState.NumIterations++
-		theModel.Clients[puzzleKey] = clientState
 		myModels[modelId] = theModel
-		fmt.Printf("Grad update %d from %.5s on %s \n", clientState.NumIterations, puzzleKey, modelId)
 					
 	}
 

@@ -27,6 +27,12 @@ def lsh_sieve(full_deltas, d, n):
     return full_grad
 
 
+def average(full_deltas, d, n):
+
+    deltas = np.reshape(full_deltas, (n, d))
+    return np.mean(deltas, axis=0)
+
+
 # Returns the index of the row that should be used in Krum
 def krum(full_deltas, dd, groupsize):
 
@@ -57,3 +63,5 @@ if __name__ == "__main__":
     sample = np.vstack((good, attackers))
 
     lsh_sieve(sample.flatten(), 5, 60)
+
+    pdb.set_trace()
