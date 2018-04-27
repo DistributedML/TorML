@@ -656,7 +656,7 @@ func gradientUpdate(puzzleKey string, modelId string, deltas []float64) {
 
 	} else {
 
-        synchronous := true
+        synchronous := false
 
         // Collect the update 
         if synchronous {
@@ -731,9 +731,12 @@ func gradientUpdate(puzzleKey string, modelId string, deltas []float64) {
             for j := 0; j < dd; j++ {
                 theModel.GlobalWeights[j] += deltas[j]
             }
+
+            theModel.NumIterations++
+            fmt.Printf("Grad update %d from %.5s on %s \n", theModel.NumIterations, puzzleKey, modelId)
+            myModels[modelId] = theModel
+            
         }   
-		
-		myModels[modelId] = theModel
 					
 	}
 
