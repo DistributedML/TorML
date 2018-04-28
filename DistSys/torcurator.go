@@ -84,7 +84,7 @@ func sendCurateMessage(logger *govec.GoLog, torDialer proxy.Dialer) int {
   msg.ModelId = modelName
   msg.Key = ""
   msg.NumFeatures = 7840
-  msg.MinClients = 5
+  msg.MinClients = 6
 
   fmt.Println(msg)
   outBuf := logger.PrepareSend("Sending packet to torserver", msg)

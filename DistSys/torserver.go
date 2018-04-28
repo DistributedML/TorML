@@ -656,7 +656,7 @@ func gradientUpdate(puzzleKey string, modelId string, deltas []float64) {
 
 	} else {
 
-        synchronous := false
+        synchronous := true
 
         // Collect the update 
         if synchronous {
