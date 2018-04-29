@@ -4,9 +4,11 @@ import matplotlib.pyplot as plt
 
 import logistic_model
 import logistic_model_test
+import logistic_aggregator
 import softmax_model
 import softmax_model_test
 import softmax_model_obj
+import poisoning_compare
 
 import numpy as np
 import utils
@@ -46,44 +48,55 @@ def basic_conv():
     print("Test error: %d", softmax_model_test.test_error(weights))
 
 
-def synchronous_non_iid():
+def synchronous_non_iid(model_names):
 
     batch_size = 10
     iterations = 4000
     epsilon = 5
     numFeatures = 7840
 
-    # Global
-    model0 = softmax_model_obj.SoftMaxModel("mnist05", epsilon=epsilon)
-    model1 = softmax_model_obj.SoftMaxModel("mnist16", epsilon=epsilon)
-    model2 = softmax_model_obj.SoftMaxModel("mnist27", epsilon=epsilon)
-    model3 = softmax_model_obj.SoftMaxModel("mnist38", epsilon=epsilon)
-    model4 = softmax_model_obj.SoftMaxModel("mnist49", epsilon=epsilon)
-    
+    list_of_models = []
+
+    for dataset in model_names:
+        list_of_models.append(softmax_model_obj.SoftMaxModel(dataset, epsilon=epsilon))
+
+    numClients = len(list_of_models)
+
     print("Start training")
 
     weights = np.random.rand(numFeatures) / 1000.0
 
     for i in xrange(iterations):
-        
-        total_delta = model0.privateFun(1, weights, batch_size)
-        total_delta = total_delta + model1.privateFun(1, weights, batch_size)
-        total_delta = total_delta + model2.privateFun(1, weights, batch_size)
-        total_delta = total_delta + model3.privateFun(1, weights, batch_size)
-        total_delta = total_delta + model4.privateFun(1, weights, batch_size)
-        total_delta = total_delta / 5
 
-        weights = weights + total_delta
+        total_delta = np.zeros((numClients, numFeatures))
 
-        if i % 100 == 0:
+        for k in range(len(list_of_models)):
+            total_delta[k, :] = list_of_models[k].privateFun(1, weights, batch_size)
+
+        delta, nnbs = logistic_aggregator.lsh_sieve(total_delta, numFeatures, numClients)
+        weights = weights + delta
+
+        print(nnbs)
+
+        if i % 400 == 0:
             print("Train error: %d", softmax_model_test.train_error(weights))
             print("Test error: %d", softmax_model_test.test_error(weights))
 
     print("Done iterations!")
     print("Train error: %d", softmax_model_test.train_error(weights))
     print("Test error: %d", softmax_model_test.test_error(weights))
+    return weights
 
 
 if __name__ == "__main__":
 
-    synchronous_non_iid()
+    full_model = softmax_model_obj.SoftMaxModel("mnist_train", epsilon=1)
+    Xtest, ytest = full_model.get_data()
+
+    models = ["mnist05", "mnist16", "mnist27", "mnist38", "mnist49", 
+        "mnist_bad", "mnist_bad", "mnist_bad"]
+    weights = synchronous_non_iid(models)
+
+    poisoning_compare.eval(Xtest, ytest, weights)
+
+    pdb.set_trace()

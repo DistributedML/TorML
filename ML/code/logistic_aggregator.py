@@ -19,18 +19,26 @@ def lsh_sieve(full_deltas, d, n):
 
     full_grad = np.zeros(d)
 
+    # The number of neighbors
+    nnbs = []
+
+    heur_distance = np.min(np.std(centred_deltas, axis=1)) / n
+    test_distance = 1.0 / (80 * d)
+
     for i in range(n):
-        neighbors = qob.find_near_neighbors(centred_deltas[i], 1.0 / d)
-        # print str(i) + " has " + str(neighbors)
+        neighbors = qob.find_near_neighbors(centred_deltas[i], test_distance)
+        nnbs.append(len(neighbors))
         full_grad = full_grad + (deltas[i] / len(neighbors))
 
-    return full_grad
+    # pdb.set_trace()
+
+    return full_grad, nnbs
 
 
 def average(full_deltas, d, n):
 
     deltas = np.reshape(full_deltas, (n, d))
-    return np.mean(deltas, axis=0)
+    return np.mean(deltas, axis=0), 0
 
 
 # Returns the index of the row that should be used in Krum

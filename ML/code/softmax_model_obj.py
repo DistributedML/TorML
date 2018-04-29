@@ -51,6 +51,9 @@ class SoftMaxModel:
             samples = sampler.flatchain
 
 
+    def get_data(self):
+        return self.X, self.y
+
     def funObj(self, ww, Xbatch, ybatch, batch_size):
 
         n, d = Xbatch.shape
