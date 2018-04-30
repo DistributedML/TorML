@@ -73,11 +73,11 @@ def synchronous_non_iid(model_names):
         for k in range(len(list_of_models)):
             total_delta[k, :] = list_of_models[k].privateFun(1, weights, batch_size)
 
-        delta, nnbs = logistic_aggregator.lsh_sieve(total_delta, numFeatures, numClients)
+        delta, nnbs = logistic_aggregator.euclidean_binning(total_delta, numFeatures, numClients)
         weights = weights + delta
 
         print(nnbs)
-
+        
         if i % 400 == 0:
             print("Train error: %d", softmax_model_test.train_error(weights))
             print("Test error: %d", softmax_model_test.test_error(weights))
@@ -93,8 +93,8 @@ if __name__ == "__main__":
     full_model = softmax_model_obj.SoftMaxModel("mnist_train", epsilon=1)
     Xtest, ytest = full_model.get_data()
 
-    models = ["mnist05", "mnist16", "mnist27", "mnist38", "mnist49",
-        "mnist_bad_49", "mnist_bad_49", "mnist_bad_49"]
+    models = ["mnist0", "mnist1", "mnist2", "mnist3", "mnist4", "mnist5","mnist6","mnist7","mnist8","mnist9",
+        "mnist_bad_49", "mnist_bad_49", "mnist_bad_49", "mnist_bad_49", "mnist_bad_49", "mnist_bad_49"]
     weights = synchronous_non_iid(models)
 
     poisoning_compare.eval(Xtest, ytest, weights)

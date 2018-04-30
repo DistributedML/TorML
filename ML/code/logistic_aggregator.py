@@ -23,7 +23,7 @@ def lsh_sieve(full_deltas, d, n):
     nnbs = []
 
     heur_distance = np.min(np.std(centred_deltas, axis=1)) / n
-    test_distance = 1.0 / (50 * d)
+    test_distance = 1.0 / (150 * d)
 
     for i in range(n):
         neighbors = qob.find_near_neighbors(centred_deltas[i], test_distance)
@@ -34,6 +34,26 @@ def lsh_sieve(full_deltas, d, n):
 
     return full_grad, nnbs
 
+def euclidean_binning(full_deltas, d, n):
+    deltas = np.reshape(full_deltas, (n, d))
+    centered_deltas = (deltas - np.mean(deltas, axis=0))
+
+    # distance range of the euclidean norm to be considered a near neighbor
+    threshhold = 0.001
+
+    full_grad = np.zeros(d)
+    nnbs = []
+
+    for i in range(n):
+        nnb = 1
+        # Count nearby gradients within threshhold
+        for j in range(n):
+            # print(np.linalg.norm(centered_deltas[i] - centered_deltas[j]))
+            if i != j and np.linalg.norm(centered_deltas[i] - centered_deltas[j]) < threshhold:
+                nnb += 1
+        nnbs.append(nnb)
+        full_grad = full_grad + deltas[i] / nnbs[i]
+    return full_grad, nnbs
 
 def average(full_deltas, d, n):
 

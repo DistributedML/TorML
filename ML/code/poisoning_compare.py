@@ -18,7 +18,7 @@ def eval(Xtest, ytest, weights):
     attacked1 = np.mean(yhat[targetIdx] == missLabel)
 
     print("Overall Error: " + str(overall))
-    print("Target Training Accuracy on 1s: " + str(correct1))
+    print("Target Training Accuracy on " +str(correctLabel) +"s: " + str(correct1))
     print("Target Attack Rate (" +str(correctLabel) + " to " + str(missLabel) + "): "+ str(attacked1)  + "\n")
 
 
