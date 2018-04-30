@@ -1,6 +1,6 @@
 from __future__ import division
 from numpy.linalg import norm
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
 
 import logistic_model
 import logistic_model_test
@@ -17,6 +17,7 @@ import pdb
 
 # Just a simple sandbox for testing out python code, without using Go.
 
+
 def basic_conv():
 
     dataset = "mnist_train"
@@ -27,7 +28,7 @@ def basic_conv():
 
     # Global
     numFeatures = softmax_model.init(dataset, epsilon=epsilon)
-    
+
     print("Start training")
 
     weights = np.random.rand(numFeatures) / 1000.0
@@ -48,7 +49,7 @@ def basic_conv():
     print("Test error: %d", softmax_model_test.test_error(weights))
 
 
-def synchronous_non_iid(model_names):
+def attack_simulation(model_names, distance):
 
     batch_size = 10
     iterations = 4000
@@ -65,6 +66,8 @@ def synchronous_non_iid(model_names):
     print("Start training")
 
     weights = np.random.rand(numFeatures) / 1000.0
+    heur_distances = np.zeros(iterations)
+    train_progress = []
 
     for i in xrange(iterations):
 
@@ -73,14 +76,20 @@ def synchronous_non_iid(model_names):
         for k in range(len(list_of_models)):
             total_delta[k, :] = list_of_models[k].privateFun(1, weights, batch_size)
 
-        delta, nnbs = logistic_aggregator.lsh_sieve(total_delta, numFeatures, numClients)
+        delta, nnbs, hd = logistic_aggregator.lsh_sieve(total_delta, numFeatures,
+                                                        numClients, distance)
+
+        heur_distances[i] = hd
         weights = weights + delta
 
-        print(nnbs)
+        if i % 50 == 0:
+            error = softmax_model_test.train_error(weights)
+            print("Train error: %d", error)
+            train_progress.append(error)
 
-        if i % 400 == 0:
-            print("Train error: %d", softmax_model_test.train_error(weights))
-            print("Test error: %d", softmax_model_test.test_error(weights))
+    # fig = plt.figure()
+    # plt.plot(heur_distances)
+    # fig.savefig("heur_distances.jpeg")
 
     print("Done iterations!")
     print("Train error: %d", softmax_model_test.train_error(weights))
@@ -93,10 +102,17 @@ if __name__ == "__main__":
     full_model = softmax_model_obj.SoftMaxModel("mnist_train", epsilon=1)
     Xtest, ytest = full_model.get_data()
 
-    models = ["mnist05", "mnist16", "mnist27", "mnist38", "mnist49", 
-        "mnist_bad", "mnist_bad", "mnist_bad"]
-    weights = synchronous_non_iid(models)
+    models = ["mnist05", "mnist16", "mnist27", "mnist38", "mnist49",
+              "mnist_bad", "mnist_bad", "mnist_bad", "mnist_bad",
+              "mnist_bad", "mnist_bad"]
 
-    poisoning_compare.eval(Xtest, ytest, weights)
+    distances = [1.0 / (80 * 7840), 1.0 / (100 * 7840)]
+    results = np.zeros((10, len(distances)))
+
+    for j in range(len(distances)):
+        for test in xrange(10):
+            weights = attack_simulation(models, distances[j])
+            score = poisoning_compare.eval(Xtest, ytest, weights)
+            results[test, j] = score
 
     pdb.set_trace()

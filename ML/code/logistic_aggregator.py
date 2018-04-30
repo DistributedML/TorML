@@ -4,7 +4,7 @@ import pdb
 import falconn
 
 
-def lsh_sieve(full_deltas, d, n):
+def lsh_sieve(full_deltas, d, n, test_distance):
 
     deltas = np.reshape(full_deltas, (n, d))
     centred_deltas = (deltas - np.mean(deltas, axis=0))
@@ -22,17 +22,19 @@ def lsh_sieve(full_deltas, d, n):
     # The number of neighbors
     nnbs = []
 
-    heur_distance = np.min(np.std(centred_deltas, axis=1)) / n
-    test_distance = 1.0 / (80 * d)
+    heur_distance = 1.5 * np.mean(np.std(centred_deltas, axis=1)) / n
+
+    # pdb.set_trace()
 
     for i in range(n):
         neighbors = qob.find_near_neighbors(centred_deltas[i], test_distance)
         nnbs.append(len(neighbors))
         full_grad = full_grad + (deltas[i] / len(neighbors))
 
+    # print(nnbs)
     # pdb.set_trace()
 
-    return full_grad, nnbs
+    return full_grad, nnbs, heur_distance
 
 
 def average(full_deltas, d, n):
