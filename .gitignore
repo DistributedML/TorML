@@ -21,3 +21,6 @@
 */bin
 */pip-selfcheck.json
 scale_results
+
+ML/MNIST/
+ML/data/mnist*.npy

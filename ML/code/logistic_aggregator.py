@@ -23,7 +23,7 @@ def lsh_sieve(full_deltas, d, n):
     nnbs = []
 
     heur_distance = np.min(np.std(centred_deltas, axis=1)) / n
-    test_distance = 1.0 / (80 * d)
+    test_distance = 1.0 / (50 * d)
 
     for i in range(n):
         neighbors = qob.find_near_neighbors(centred_deltas[i], test_distance)

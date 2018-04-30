@@ -6,18 +6,20 @@ import pdb
 def eval(Xtest, ytest, weights):
 
     # hardcoded for MNIST
+    correctLabel = 4
+    missLabel = 9
     W = np.reshape(weights, (10, 784))
     yhat = np.argmax(np.dot(Xtest, W.T), axis=1)
 
-    targetIdx = np.where(ytest == 1)
-    otherIdx = np.where(ytest != 1)
+    targetIdx = np.where(ytest == correctLabel)
+    otherIdx = np.where(ytest != correctLabel)
     overall = np.mean(yhat[otherIdx] == ytest[otherIdx])
-    correct1 = np.mean(yhat[targetIdx] == 1)
-    attacked1 = np.mean(yhat[targetIdx] == 7)
+    correct1 = np.mean(yhat[targetIdx] == correctLabel)
+    attacked1 = np.mean(yhat[targetIdx] == missLabel)
 
     print("Overall Error: " + str(overall))
     print("Target Training Accuracy on 1s: " + str(correct1))
-    print("Target Attack Rate (1 to 7): " + str(attacked1) + "\n")    
+    print("Target Attack Rate (" +str(correctLabel) + " to " + str(missLabel) + "): "+ str(attacked1)  + "\n")
 
 
 def main():
