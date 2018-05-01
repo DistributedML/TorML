@@ -22,5 +22,5 @@
 */pip-selfcheck.json
 scale_results
 
-ML/MNIST/
+ML/MNIST/*ubyte
 ML/data/mnist*.npy
