@@ -9,15 +9,15 @@ def eval(Xtest, ytest, weights):
     W = np.reshape(weights, (10, 784))
     yhat = np.argmax(np.dot(Xtest, W.T), axis=1)
 
-    targetIdx = np.where(ytest == 1)
-    otherIdx = np.where(ytest != 1)
+    targetIdx = np.where(ytest == 4)
+    otherIdx = np.where(ytest != 4)
     overall = np.mean(yhat[otherIdx] == ytest[otherIdx])
-    correct1 = np.mean(yhat[targetIdx] == 1)
-    attacked1 = np.mean(yhat[targetIdx] == 7)
+    correct1 = np.mean(yhat[targetIdx] == 4)
+    attacked1 = np.mean(yhat[targetIdx] == 9)
 
     print("Overall Error: " + str(overall))
-    print("Target Training Accuracy on 1s: " + str(correct1))
-    print("Target Attack Rate (1 to 7): " + str(attacked1) + "\n")
+    print("Target Training Accuracy on 4s: " + str(correct1))
+    print("Target Attack Rate (4 to 9): " + str(attacked1) + "\n")
 
     return attacked1
 

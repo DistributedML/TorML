@@ -62,6 +62,7 @@ def attack_simulation(model_names, distance):
         list_of_models.append(softmax_model_obj.SoftMaxModel(dataset, epsilon=epsilon))
 
     numClients = len(list_of_models)
+    logistic_aggregator.init(numClients, numFeatures)
 
     print("Start training")
 
@@ -76,8 +77,7 @@ def attack_simulation(model_names, distance):
         for k in range(len(list_of_models)):
             total_delta[k, :] = list_of_models[k].privateFun(1, weights, batch_size)
 
-        delta, nnbs, hd = logistic_aggregator.lsh_sieve(total_delta, numFeatures,
-                                                        numClients, distance)
+        delta, hd = logistic_aggregator.lsh_sieve(total_delta, distance)
 
         heur_distances[i] = hd
         weights = weights + delta
@@ -102,17 +102,15 @@ if __name__ == "__main__":
     full_model = softmax_model_obj.SoftMaxModel("mnist_train", epsilon=1)
     Xtest, ytest = full_model.get_data()
 
-    models = ["mnist05", "mnist16", "mnist27", "mnist38", "mnist49",
-              "mnist_bad", "mnist_bad", "mnist_bad", "mnist_bad",
-              "mnist_bad", "mnist_bad"]
+    models = ["mnist0", "mnist1", "mnist2", "mnist3", "mnist4",
+              "mnist5", "mnist6", "mnist7", "mnist8", "mnist9",
+              "mnist_bad_49", "mnist_bad_49", "mnist_bad_49", "mnist_bad_49",
+              "mnist_bad_49", "mnist_bad_49", "mnist_bad_49", "mnist_bad_49",
+              "mnist_bad_49", "mnist_bad_49","mnist_bad_49", "mnist_bad_49"]
 
-    distances = [1.0 / (80 * 7840), 1.0 / (100 * 7840)]
-    results = np.zeros((10, len(distances)))
+    distance = 1.0 / (150 * 7840)
 
-    for j in range(len(distances)):
-        for test in xrange(10):
-            weights = attack_simulation(models, distances[j])
-            score = poisoning_compare.eval(Xtest, ytest, weights)
-            results[test, j] = score
+    weights = attack_simulation(models, distance)
+    score = poisoning_compare.eval(Xtest, ytest, weights)
 
     pdb.set_trace()
