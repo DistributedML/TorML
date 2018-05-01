@@ -20,6 +20,15 @@ def init(num_clients, num_features):
     global hit_matrix
     hit_matrix = np.zeros((n, n))
 
+    #Global variables for adaptive threshholds
+    global bin_std
+    bin_std = 0
+
+    global bin_threshhold
+    bin_threshhold = 1.0
+
+    global typical_set
+    typical_set = False
 
 def lsh_sieve(full_deltas, test_distance):
 
@@ -60,12 +69,17 @@ def lsh_sieve(full_deltas, test_distance):
 
     return full_grad, heur_distance
 
-def euclidean_binning(full_deltas, d, n):
+def euclidean_binning(full_deltas, test_distance):
     deltas = np.reshape(full_deltas, (n, d))
     centered_deltas = (deltas - np.mean(deltas, axis=0))
 
     # distance range of the euclidean norm to be considered a near neighbor
-    threshhold = 0.001
+
+    #threshhold = 0.001
+    global bin_threshhold
+    global bin_std
+    global typical_set
+    threshhold = bin_threshhold / 2
 
     full_grad = np.zeros(d)
     nnbs = []
@@ -79,7 +93,23 @@ def euclidean_binning(full_deltas, d, n):
                 nnb += 1
         nnbs.append(nnb)
         full_grad = full_grad + deltas[i] / nnbs[i]
-    return full_grad, nnbs
+
+    # Take threshholf if it improved variance
+    std = np.std(nnbs)
+    if std > bin_std:
+        if not(typical_set):
+            typical_set = True
+        bin_threshhold = threshhold
+        bin_std = std
+    elif not(typical_set):
+        # Still haven't escaped std of 0 yet
+        bin_threshhold = threshhold
+    else:
+        # Went too far. Try 0.75 threshhold next time
+        bin_threshhold = 1.5*threshhold
+    print(nnbs)
+    print(std)
+    return full_grad, test_distance
 
 def average(full_deltas, d, n):
 

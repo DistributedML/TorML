@@ -77,14 +77,14 @@ def attack_simulation(model_names, distance):
         for k in range(len(list_of_models)):
             total_delta[k, :] = list_of_models[k].privateFun(1, weights, batch_size)
 
-        delta, hd = logistic_aggregator.lsh_sieve(total_delta, distance)
-        
+        delta, hd = logistic_aggregator.euclidean_binning(total_delta, distance)
+
         heur_distances[i] = hd
         weights = weights + delta
 
         if i % 50 == 0:
             error = softmax_model_test.train_error(weights)
-            print("Train error: %d", error)
+            # print("Train error: %d", error)
             train_progress.append(error)
 
     # fig = plt.figure()
