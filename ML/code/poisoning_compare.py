@@ -6,8 +6,8 @@ import pdb
 def eval(Xtest, ytest, weights):
 
     # hardcoded for MNIST
-    correctLabel = 4
-    missLabel = 9
+    correctLabel = 1
+    missLabel = 7
     W = np.reshape(weights, (10, 784))
     yhat = np.argmax(np.dot(Xtest, W.T), axis=1)
 
