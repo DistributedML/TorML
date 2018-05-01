@@ -20,16 +20,6 @@ def init(num_clients, num_features):
     global hit_matrix
     hit_matrix = np.zeros((n, n))
 
-    #Global variables for adaptive threshholds
-    global bin_std
-    bin_std = 0
-
-    global bin_threshhold
-    bin_threshhold = 1.0
-
-    global typical_set
-    typical_set = False
-
 def lsh_sieve(full_deltas, test_distance):
 
     deltas = np.reshape(full_deltas, (n, d))
@@ -69,17 +59,41 @@ def lsh_sieve(full_deltas, test_distance):
 
     return full_grad, heur_distance
 
-def euclidean_binning(full_deltas, test_distance):
+def search_distance(full_deltas, distance):
+    std = np.std(get_nnbs(full_deltas, distance))
+    if std == 0:
+        return search_distance(full_deltas, distance/2)
+    std_left = np.std(get_nnbs(full_deltas, distance/2))
+    std_right = np.std(get_nnbs(full_deltas, distance + distance/2))
+    #print("Std_left: " + str(std_left) + "distance left: " + str(distance/2) + " Std_right: " + str(std_right) + "distance: " + str(distance))
+    if std_left < std and std_right < std:
+        return distance
+    if std_left > std_right:
+        return search_distance(full_deltas, distance/2)
+    else:
+        return search_distance(full_deltas, distance + distance/2)
+
+def get_nnbs(full_deltas, distance):
     deltas = np.reshape(full_deltas, (n, d))
     centered_deltas = (deltas - np.mean(deltas, axis=0))
 
-    # distance range of the euclidean norm to be considered a near neighbor
+    full_grad = np.zeros(d)
+    nnbs = []
 
-    #threshhold = 0.001
-    global bin_threshhold
-    global bin_std
-    global typical_set
-    threshhold = bin_threshhold / 2
+    for i in range(n):
+        nnb = 1
+        # Count nearby gradients within threshhold
+        for j in range(n):
+            # print(np.linalg.norm(centered_deltas[i] - centered_deltas[j]))
+            if i != j and np.linalg.norm(centered_deltas[i] - centered_deltas[j]) < distance:
+                nnb += 1
+        nnbs.append(nnb)
+    return nnbs
+
+
+def euclidean_binning(full_deltas, threshhold):
+    deltas = np.reshape(full_deltas, (n, d))
+    centered_deltas = (deltas - np.mean(deltas, axis=0))
 
     full_grad = np.zeros(d)
     nnbs = []
@@ -94,22 +108,7 @@ def euclidean_binning(full_deltas, test_distance):
         nnbs.append(nnb)
         full_grad = full_grad + deltas[i] / nnbs[i]
 
-    # Take threshholf if it improved variance
-    std = np.std(nnbs)
-    if std > bin_std:
-        if not(typical_set):
-            typical_set = True
-        bin_threshhold = threshhold
-        bin_std = std
-    elif not(typical_set):
-        # Still haven't escaped std of 0 yet
-        bin_threshhold = threshhold
-    else:
-        # Went too far. Try 0.75 threshhold next time
-        bin_threshhold = 1.5*threshhold
-    print(nnbs)
-    print(std)
-    return full_grad, test_distance
+    return full_grad, nnbs
 
 def average(full_deltas, d, n):
 
