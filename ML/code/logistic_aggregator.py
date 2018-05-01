@@ -58,9 +58,6 @@ def lsh_sieve(full_deltas, test_distance):
     global it
     it += 1
 
-    if it % 1000 == 0:
-        pdb.set_trace()
-
     return full_grad, heur_distance
 
 
