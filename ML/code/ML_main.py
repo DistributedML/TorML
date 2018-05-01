@@ -17,6 +17,7 @@ import pdb
 
 # Just a simple sandbox for testing out python code, without using Go.
 
+
 def basic_conv():
 
     dataset = "mnist_train"
@@ -48,7 +49,7 @@ def basic_conv():
     print("Test error: %d", softmax_model_test.test_error(weights))
 
 
-def synchronous_non_iid(model_names):
+def attack_simulation(model_names, distance):
 
     batch_size = 10
     iterations = 4000
@@ -61,10 +62,13 @@ def synchronous_non_iid(model_names):
         list_of_models.append(softmax_model_obj.SoftMaxModel(dataset, epsilon=epsilon))
 
     numClients = len(list_of_models)
+    logistic_aggregator.init(numClients, numFeatures)
 
     print("Start training")
 
     weights = np.random.rand(numFeatures) / 1000.0
+    heur_distances = np.zeros(iterations)
+    train_progress = []
 
     for i in xrange(iterations):
 
@@ -73,14 +77,19 @@ def synchronous_non_iid(model_names):
         for k in range(len(list_of_models)):
             total_delta[k, :] = list_of_models[k].privateFun(1, weights, batch_size)
 
-        delta, nnbs = logistic_aggregator.euclidean_binning(total_delta, numFeatures, numClients)
+        delta, hd = logistic_aggregator.lsh_sieve(total_delta, distance)
+        
+        heur_distances[i] = hd
         weights = weights + delta
 
-        print(nnbs)
-        
-        if i % 400 == 0:
-            print("Train error: %d", softmax_model_test.train_error(weights))
-            print("Test error: %d", softmax_model_test.test_error(weights))
+        if i % 50 == 0:
+            error = softmax_model_test.train_error(weights)
+            print("Train error: %d", error)
+            train_progress.append(error)
+
+    # fig = plt.figure()
+    # plt.plot(heur_distances)
+    # fig.savefig("heur_distances.jpeg")
 
     print("Done iterations!")
     print("Train error: %d", softmax_model_test.train_error(weights))
@@ -93,10 +102,15 @@ if __name__ == "__main__":
     full_model = softmax_model_obj.SoftMaxModel("mnist_train", epsilon=1)
     Xtest, ytest = full_model.get_data()
 
-    models = ["mnist0", "mnist1", "mnist2", "mnist3", "mnist4", "mnist5","mnist6","mnist7","mnist8","mnist9",
-        "mnist_bad_49", "mnist_bad_49", "mnist_bad_49", "mnist_bad_49", "mnist_bad_49", "mnist_bad_49"]
-    weights = synchronous_non_iid(models)
+    models = ["mnist0", "mnist1", "mnist2", "mnist3", "mnist4",
+              "mnist5", "mnist6", "mnist7", "mnist8", "mnist9",
+              "mnist_bad_49", "mnist_bad_49", "mnist_bad_49", "mnist_bad_49",
+              "mnist_bad_49", "mnist_bad_49", "mnist_bad_49", "mnist_bad_49",
+              "mnist_bad_49", "mnist_bad_49","mnist_bad_49", "mnist_bad_49"]
 
-    poisoning_compare.eval(Xtest, ytest, weights)
+    distance = 1.0 / (150 * 7840)
+
+    weights = attack_simulation(models, distance)
+    score = poisoning_compare.eval(Xtest, ytest, weights)
 
     pdb.set_trace()

@@ -3,8 +3,25 @@ import numpy as np
 import pdb
 import falconn
 
+n = 0
+d = 0
+hit_matrix = np.zeros(1)
+it = 0
 
-def lsh_sieve(full_deltas, d, n):
+
+def init(num_clients, num_features):
+
+    global d
+    d = num_features
+
+    global n
+    n = num_clients
+
+    global hit_matrix
+    hit_matrix = np.zeros((n, n))
+
+
+def lsh_sieve(full_deltas, test_distance):
 
     deltas = np.reshape(full_deltas, (n, d))
     centred_deltas = (deltas - np.mean(deltas, axis=0))
@@ -19,20 +36,29 @@ def lsh_sieve(full_deltas, d, n):
 
     full_grad = np.zeros(d)
 
-    # The number of neighbors
-    nnbs = []
-
-    heur_distance = np.min(np.std(centred_deltas, axis=1)) / n
-    test_distance = 1.0 / (150 * d)
+    heur_distance = 1.5 * np.mean(np.std(centred_deltas, axis=1)) / n
 
     for i in range(n):
         neighbors = qob.find_near_neighbors(centred_deltas[i], test_distance)
-        nnbs.append(len(neighbors))
-        full_grad = full_grad + (deltas[i] / len(neighbors))
+        hit_matrix[i][neighbors] += 1
+        # full_grad += (deltas[i] / len(neighbors))
 
-    # pdb.set_trace()
+    global hit_matrix
+    hit_matrix = hit_matrix - np.eye(n)
 
-    return full_grad, nnbs
+    # Take the inverse L2 norm
+    wv = 1.0 / (np.linalg.norm(hit_matrix, axis=1) + 1)
+
+    # Normalize to have sum equal to number of clients
+    wv = wv * n / np.linalg.norm(wv)
+
+    # Apply the weights
+    full_grad += np.dot(deltas.T, wv)
+
+    global it
+    it += 1
+
+    return full_grad, heur_distance
 
 def euclidean_binning(full_deltas, d, n):
     deltas = np.reshape(full_deltas, (n, d))

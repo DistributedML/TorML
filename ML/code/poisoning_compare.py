@@ -20,6 +20,7 @@ def eval(Xtest, ytest, weights):
     print("Overall Error: " + str(overall))
     print("Target Training Accuracy on " +str(correctLabel) +"s: " + str(correct1))
     print("Target Attack Rate (" +str(correctLabel) + " to " + str(missLabel) + "): "+ str(attacked1)  + "\n")
+    return attacked1
 
 
 def main():
