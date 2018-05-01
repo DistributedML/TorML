@@ -80,6 +80,15 @@ def slice_for_tm(by_digit=True):
     for q in range(t):
         Xtest[q, :] = np.asarray(images_test[q])
 
+    for m in range(10):
+        idx = np.where(ytrain == m)[0]
+
+        class_slice = Xtrain[idx]
+        data_slice = np.hstack((class_slice, ytrain[idx][:, None]))
+        print("Saving mnist" + str(m))
+        np.save("mnist" + str(m), data_slice)
+
+
     for k in range(5):
 
         idx = np.where((ytrain == k) + (ytrain == k + 5))[0]
