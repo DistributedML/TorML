@@ -96,7 +96,7 @@ def attack_simulation(model_names, distance):
             num_printed += 1
             print("Train error: %.10f \t %d iterations left" % (error, progress))
             train_progress.append(error)
-            if num_printed >= 10 and train_progress[num_printed-10] - train_progress[num_printed-1] < 0.001):
+            if num_printed >= 10 and (train_progress[num_printed-10] - train_progress[num_printed-1] < 0.001):
                 print("Not improving much...Quiting...")
                 break
 
@@ -117,7 +117,7 @@ if __name__ == "__main__":
 
     models = ["mnist0", "mnist1", "mnist2", "mnist3", "mnist4",
               "mnist5", "mnist6", "mnist7", "mnist8", "mnist9",
-              "mnist_bad_17"]
+              "mnist_bad_49", "mnist_bad_49"]
 
     distance = 1.0 / (150 * 7840) #49 attack
 
