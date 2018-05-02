@@ -129,7 +129,7 @@ def euclidean_binning_hm(full_deltas, distance):
     wv = 1.0 / (np.linalg.norm(new_hm, axis=1) + 1)
 
     # Normalize to have sum equal to number of clients
-    wv = wv * n / np.linalg.norm(wv)
+    #wv = wv * n / np.linalg.norm(wv)
 
     # Apply the weights
     full_grad += np.dot(deltas.T, wv)
