@@ -78,16 +78,16 @@ def attack_simulation(model_names, distance):
             total_delta[k, :] = list_of_models[k].privateFun(1, weights, batch_size)
 
         distance = logistic_aggregator.search_distance(total_delta, 1.0)
-        delta, nnbs = logistic_aggregator.euclidean_binning(total_delta, distance)
+        delta, hm = logistic_aggregator.euclidean_binning_hm(total_delta, distance)
         #print(distance)
-        print(nnbs)
+        #print(nnbs)
 
         heur_distances[i] = distance
         weights = weights + delta
 
         if i % 50 == 0:
             error = softmax_model_test.train_error(weights)
-            # print("Train error: %d", error)
+            print("Train error: %d", error)
             train_progress.append(error)
 
     # fig = plt.figure()
@@ -106,10 +106,10 @@ if __name__ == "__main__":
     Xtest, ytest = full_model.get_data()
 
     models = ["mnist0", "mnist1", "mnist2", "mnist3", "mnist4",
-              "mnist5", "mnist6", "mnist7", "mnist8", "mnist9"]
-              # "mnist_bad_17", "mnist_bad_17", "mnist_bad_17", "mnist_bad_17",
-              # "mnist_bad_17", "mnist_bad_17", "mnist_bad_17", "mnist_bad_17",
-              # "mnist_bad_17", "mnist_bad_17","mnist_bad_17", "mnist_bad_17"]
+              "mnist5", "mnist6", "mnist7", "mnist8", "mnist9",
+              "mnist_bad_17", "mnist_bad_17", "mnist_bad_17", "mnist_bad_17",
+              "mnist_bad_17", "mnist_bad_17", "mnist_bad_17", "mnist_bad_17",
+              "mnist_bad_17", "mnist_bad_17","mnist_bad_17", "mnist_bad_17"]
 
     distance = 1.0 / (150 * 7840)
 

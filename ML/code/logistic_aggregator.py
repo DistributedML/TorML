@@ -70,8 +70,8 @@ def search_distance(full_deltas, distance):
             return search_distance(full_deltas, distance/2)
     std_left = np.std(get_nnbs(full_deltas, distance/2))
     std_right = np.std(get_nnbs(full_deltas, distance + distance/2))
-    #print("Std_left: " + str(std_left) + "distance left: " + str(distance/2) + " Std_right: " + str(std_right) + "distance: " + str(distance))
-    if std_left < std and std_right < std:
+    # print("Std_left: " + str(std_left) + "distance left: " + str(distance/2) + " Std_right: " + str(std_right) + "distance: " + str(distance) + " std: " + str(std))
+    if std_left <= std and std_right <= std:
         return distance
     if std_left > std_right:
         return search_distance(full_deltas, distance/2)
@@ -95,8 +95,40 @@ def get_nnbs(full_deltas, distance):
         nnbs.append(nnb)
     return nnbs
 
+def euclidean_binning_hm(full_deltas, distance):
+    global hit_matrix
+    deltas = np.reshape(full_deltas, (n, d))
+    centered_deltas = (deltas - np.mean(deltas, axis=0))
 
-def euclidean_binning(full_deltas, threshhold):
+    full_grad = np.zeros(d)
+    nnbs = []
+    for i in range(n):
+        nnb = 1
+        # Count nearby gradients within distance
+        for j in range(n):
+            # print(np.linalg.norm(centered_deltas[i] - centered_deltas[j]))
+            if i != j and np.linalg.norm(centered_deltas[i] - centered_deltas[j]) < distance:
+                hit_matrix[i][j] += 1
+                nnb += 1
+        nnbs.append(nnb)
+    #print(nnbs)
+    #hit_matrix = hit_matrix - np.eye(n)
+
+    # Take the inverse L2 norm
+    wv = 1.0 / (np.linalg.norm(hit_matrix, axis=1) + 1)
+
+    # Normalize to have sum equal to number of clients
+    wv = wv * n / np.linalg.norm(wv)
+
+    # Apply the weights
+    full_grad += np.dot(deltas.T, wv)
+
+    global it
+    it += 1
+
+    return full_grad, distance
+
+def euclidean_binning(full_deltas, distance):
     deltas = np.reshape(full_deltas, (n, d))
     centered_deltas = (deltas - np.mean(deltas, axis=0))
 
@@ -108,7 +140,7 @@ def euclidean_binning(full_deltas, threshhold):
         # Count nearby gradients within threshhold
         for j in range(n):
             # print(np.linalg.norm(centered_deltas[i] - centered_deltas[j]))
-            if i != j and np.linalg.norm(centered_deltas[i] - centered_deltas[j]) < threshhold:
+            if i != j and np.linalg.norm(centered_deltas[i] - centered_deltas[j]) < distance:
                 nnb += 1
         nnbs.append(nnb)
         full_grad = full_grad + deltas[i] / nnbs[i]
