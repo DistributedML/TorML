@@ -112,10 +112,21 @@ def euclidean_binning_hm(full_deltas, distance):
                 nnb += 1
         nnbs.append(nnb)
     #print(nnbs)
-    #hit_matrix = hit_matrix - np.eye(n)
+    # TODO:: Make thsi faster/inplace\
+    # Reweight graph based on connectivity heuristic
+    new_hm = np.zeros((n, n))
+    collusions = np.zeros(n);
+    # Find number of collusions per node
+    for i in range(n):
+        collusions[i] = np.sum(hit_matrix[i])
+    # Reweight based on differences in sum
+    for i in range(n):
+        for j in range(n):
+            # add 1 for divby0 and so that poisoners don't benefit from this
+            new_hm[i][j] = hit_matrix[i][j] / (np.abs(collusions[i] - collusions[j]) + 1)
 
     # Take the inverse L2 norm
-    wv = 1.0 / (np.linalg.norm(hit_matrix, axis=1) + 1)
+    wv = 1.0 / (np.linalg.norm(new_hm, axis=1) + 1)
 
     # Normalize to have sum equal to number of clients
     wv = wv * n / np.linalg.norm(wv)
