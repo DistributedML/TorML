@@ -58,6 +58,9 @@ def attack_simulation(model_names, distance):
 
     list_of_models = []
 
+    print_interval = 50
+    progress = iterations/print_interval
+
     for dataset in model_names:
         list_of_models.append(softmax_model_obj.SoftMaxModel(dataset, epsilon=epsilon))
 
@@ -87,7 +90,8 @@ def attack_simulation(model_names, distance):
 
         if i % 50 == 0:
             error = softmax_model_test.train_error(weights)
-            print("Train error: %d", error)
+            progress -= 1
+            print("Train error: %.10f \t %d iterations left" % (error, progress))
             train_progress.append(error)
 
     # fig = plt.figure()
