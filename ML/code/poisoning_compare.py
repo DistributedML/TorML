@@ -3,11 +3,9 @@ import pandas as pd
 import pdb
 
 
-def eval(Xtest, ytest, weights):
+def eval(Xtest, ytest, weights, correctLabel, missLabel):
 
     # hardcoded for MNIST
-    correctLabel = 4
-    missLabel = 9
     W = np.reshape(weights, (10, 784))
     yhat = np.argmax(np.dot(Xtest, W.T), axis=1)
 

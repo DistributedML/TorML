@@ -60,6 +60,7 @@ def attack_simulation(model_names, distance):
 
     print_interval = 50
     progress = iterations/print_interval
+    num_printed = 0
 
     for dataset in model_names:
         list_of_models.append(softmax_model_obj.SoftMaxModel(dataset, epsilon=epsilon))
@@ -92,8 +93,12 @@ def attack_simulation(model_names, distance):
         if i % 50 == 0:
             error = softmax_model_test.train_error(weights)
             progress -= 1
+            num_printed += 1
             print("Train error: %.10f \t %d iterations left" % (error, progress))
             train_progress.append(error)
+            if num_printed >= 10 and train_progress[num_printed-10] - train_progress[num_printed-1] < 0.001):
+                print("Not improving much...Quiting...")
+                break
 
     # fig = plt.figure()
     # plt.plot(heur_distances)
@@ -112,13 +117,12 @@ if __name__ == "__main__":
 
     models = ["mnist0", "mnist1", "mnist2", "mnist3", "mnist4",
               "mnist5", "mnist6", "mnist7", "mnist8", "mnist9",
-              "mnist_bad_49", "mnist_bad_49", "mnist_bad_49", "mnist_bad_49",
-              "mnist_bad_49", "mnist_bad_49", "mnist_bad_49", "mnist_bad_49",
-              "mnist_bad_49", "mnist_bad_49","mnist_bad_49", "mnist_bad_49"]
+              "mnist_bad_17"]
 
     distance = 1.0 / (150 * 7840) #49 attack
 
     weights = attack_simulation(models, distance)
-    score = poisoning_compare.eval(Xtest, ytest, weights)
+    #score = poisoning_compare.eval(Xtest, ytest, weights, 4, 9)
+    score = poisoning_compare.eval(Xtest, ytest, weights, 1, 7)
 
     pdb.set_trace()
