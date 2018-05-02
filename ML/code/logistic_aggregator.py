@@ -42,14 +42,23 @@ def lsh_sieve(full_deltas, test_distance):
         hit_matrix[i][neighbors] += 1
         # full_grad += (deltas[i] / len(neighbors))
 
+
     global hit_matrix
     hit_matrix = hit_matrix - np.eye(n)
 
-    # Take the inverse L2 norm
-    wv = 1.0 / (np.linalg.norm(hit_matrix, axis=1) + 1)
+    new_hm = np.zeros((n, n))
+    collusions = np.zeros(n);
+    # Find number of collusions per node
+    for i in range(n):
+        collusions[i] = np.sum(hit_matrix[i])
+    # Reweight based on differences in sum
+    for i in range(n):
+        for j in range(n):
+            # add 1 for divby0 and so that poisoners don't benefit from this
+            new_hm[i][j] = hit_matrix[i][j] / (np.abs(collusions[i] - collusions[j]) + 1)
 
-    # Normalize to have sum equal to number of clients
-    wv = wv * n / np.linalg.norm(wv)
+    # Take the inverse L2 norm
+    wv = 1.0 / (np.linalg.norm(new_hm, axis=1) + 1)
 
     # Apply the weights
     full_grad += np.dot(deltas.T, wv)
@@ -59,8 +68,8 @@ def lsh_sieve(full_deltas, test_distance):
 
     return full_grad, heur_distance
 
-def search_distance(full_deltas, distance):
-    std = np.std(get_nnbs(full_deltas, distance))
+def search_distance_euc(full_deltas, distance):
+    std = np.std(get_nnbs_euc(full_deltas, distance))
 
     if std == 0:
         # no poisoners
@@ -68,8 +77,8 @@ def search_distance(full_deltas, distance):
             return 0
         else:
             return search_distance(full_deltas, distance/2)
-    std_left = np.std(get_nnbs(full_deltas, distance/2))
-    std_right = np.std(get_nnbs(full_deltas, distance + distance/2))
+    std_left = np.std(get_nnbs_euc(full_deltas, distance/2))
+    std_right = np.std(get_nnbs_euc(full_deltas, distance + distance/2))
     # print("Std_left: " + str(std_left) + "distance left: " + str(distance/2) + " Std_right: " + str(std_right) + "distance: " + str(distance) + " std: " + str(std))
     if std_left <= std and std_right <= std:
         return distance
@@ -78,7 +87,7 @@ def search_distance(full_deltas, distance):
     else:
         return search_distance(full_deltas, distance + distance/2)
 
-def get_nnbs(full_deltas, distance):
+def get_nnbs_euc(full_deltas, distance):
     deltas = np.reshape(full_deltas, (n, d))
     centered_deltas = (deltas - np.mean(deltas, axis=0))
 

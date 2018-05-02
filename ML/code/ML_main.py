@@ -80,8 +80,8 @@ def attack_simulation(model_names, distance):
         for k in range(len(list_of_models)):
             total_delta[k, :] = list_of_models[k].privateFun(1, weights, batch_size)
 
-        distance = logistic_aggregator.search_distance(total_delta, 1.0)
-        delta, hm = logistic_aggregator.euclidean_binning_hm(total_delta, distance)
+        # distance = logistic_aggregator.search_distance(total_delta, 1.0)
+        delta, hm = logistic_aggregator.lsh_sieve(total_delta, distance)
         #print(distance)
         #print(nnbs)
 
@@ -111,11 +111,11 @@ if __name__ == "__main__":
 
     models = ["mnist0", "mnist1", "mnist2", "mnist3", "mnist4",
               "mnist5", "mnist6", "mnist7", "mnist8", "mnist9",
-              "mnist_bad_17", "mnist_bad_17", "mnist_bad_17", "mnist_bad_17",
-              "mnist_bad_17", "mnist_bad_17", "mnist_bad_17", "mnist_bad_17",
-              "mnist_bad_17", "mnist_bad_17","mnist_bad_17", "mnist_bad_17"]
+              "mnist_bad_49", "mnist_bad_49", "mnist_bad_49", "mnist_bad_49",
+              "mnist_bad_49", "mnist_bad_49", "mnist_bad_49", "mnist_bad_49",
+              "mnist_bad_49", "mnist_bad_49","mnist_bad_49", "mnist_bad_49"]
 
-    distance = 1.0 / (150 * 7840)
+    distance = 1.0 / (150 * 7840) #49 attack
 
     weights = attack_simulation(models, distance)
     score = poisoning_compare.eval(Xtest, ytest, weights)
