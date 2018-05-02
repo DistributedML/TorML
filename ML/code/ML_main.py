@@ -79,9 +79,10 @@ def attack_simulation(model_names, distance):
 
         for k in range(len(list_of_models)):
             total_delta[k, :] = list_of_models[k].privateFun(1, weights, batch_size)
-
-        # distance = logistic_aggregator.search_distance(total_delta, 1.0)
-        delta, hm = logistic_aggregator.lsh_sieve(total_delta, distance)
+        distance = logistic_aggregator.search_distance_euc(total_delta, 1.0)
+        delta, distance, nnbs = logistic_aggregator.euclidean_binning_hm(total_delta, distance)
+        #distance = logistic_aggregator.search_distance_lsh(total_delta, 1.0, -float('Inf'), False)
+        #delta, hm, nnbs = logistic_aggregator.lsh_sieve(total_delta, distance)
         #print(distance)
         #print(nnbs)
 

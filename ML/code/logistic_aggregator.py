@@ -32,6 +32,7 @@ def lsh_sieve(full_deltas, test_distance):
 
     # Greedy merge within a distance
     # all_sets = list()
+    nnbs = []
 
     full_grad = np.zeros(d)
 
@@ -40,7 +41,7 @@ def lsh_sieve(full_deltas, test_distance):
     for i in range(n):
         neighbors = qob.find_near_neighbors(centred_deltas[i], test_distance)
         hit_matrix[i][neighbors] += 1
-        # full_grad += (deltas[i] / len(neighbors))
+        nnbs.append(len(neighbors))
 
 
     global hit_matrix
@@ -66,7 +67,7 @@ def lsh_sieve(full_deltas, test_distance):
     global it
     it += 1
 
-    return full_grad, heur_distance
+    return full_grad, heur_distance, nnbs
 
 def search_distance_euc(full_deltas, distance):
     std = np.std(get_nnbs_euc(full_deltas, distance))
@@ -76,22 +77,45 @@ def search_distance_euc(full_deltas, distance):
         if distance < 1e-10:
             return 0
         else:
-            return search_distance(full_deltas, distance/2)
+            return search_distance_euc(full_deltas, distance/2)
     std_left = np.std(get_nnbs_euc(full_deltas, distance/2))
     std_right = np.std(get_nnbs_euc(full_deltas, distance + distance/2))
     # print("Std_left: " + str(std_left) + "distance left: " + str(distance/2) + " Std_right: " + str(std_right) + "distance: " + str(distance) + " std: " + str(std))
     if std_left <= std and std_right <= std:
         return distance
     if std_left > std_right:
-        return search_distance(full_deltas, distance/2)
+        return search_distance_euc(full_deltas, distance/2)
     else:
-        return search_distance(full_deltas, distance + distance/2)
+        return search_distance_euc(full_deltas, distance + distance/2)
+
+def search_distance_lsh(full_deltas, distance, prev_std, typical_set):
+    std = np.std(get_nnbs_lsh(full_deltas, distance))
+    # First run to initialize prev_std
+    if prev_std == -float('Inf'):
+        return search_distance_lsh(full_deltas, distance/2, std, typical_set)
+    # Until you reach typical set, lsh surprisingly returns same nnbs
+    if prev_std == std:
+        # no poisoners
+        if distance < 1e-10:
+            return 0
+        else:
+            return search_distance_lsh(full_deltas, distance/2, std, False)
+
+    std_left = np.std(get_nnbs_lsh(full_deltas, distance/2))
+    std_right = np.std(get_nnbs_lsh(full_deltas, distance + distance/2))
+    # print("Std_left: " + str(std_left) + "distance left: " + str(distance/2) + " Std_right: " + str(std_right) + "distance: " + str(distance) + " std: " + str(std))
+    if std_left <= std and std_right <= std:
+        return distance
+    if std_left > std_right:
+        return search_distance_lsh(full_deltas, distance/2, std, True)
+    else:
+        return search_distance_lsh(full_deltas, distance + distance/2, std, True)
+
 
 def get_nnbs_euc(full_deltas, distance):
     deltas = np.reshape(full_deltas, (n, d))
     centered_deltas = (deltas - np.mean(deltas, axis=0))
 
-    full_grad = np.zeros(d)
     nnbs = []
 
     for i in range(n):
@@ -102,6 +126,22 @@ def get_nnbs_euc(full_deltas, distance):
             if i != j and np.linalg.norm(centered_deltas[i] - centered_deltas[j]) < distance:
                 nnb += 1
         nnbs.append(nnb)
+    return nnbs
+
+def get_nnbs_lsh(full_deltas, distance):
+    deltas = np.reshape(full_deltas, (n, d))
+    centred_deltas = (deltas - np.mean(deltas, axis=0))
+
+    params = falconn.get_default_parameters(n, d)
+    fln = falconn.LSHIndex(params)
+    fln.setup(centred_deltas)
+    qob = fln.construct_query_object()
+
+    nnbs = []
+
+    for i in range(n):
+        neighbors = qob.find_near_neighbors(centred_deltas[i], distance)
+        nnbs.append(len(neighbors))
     return nnbs
 
 def euclidean_binning_hm(full_deltas, distance):
@@ -146,7 +186,7 @@ def euclidean_binning_hm(full_deltas, distance):
     global it
     it += 1
 
-    return full_grad, distance
+    return full_grad, distance, nnbs
 
 def euclidean_binning(full_deltas, distance):
     deltas = np.reshape(full_deltas, (n, d))
