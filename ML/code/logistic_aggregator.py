@@ -61,8 +61,13 @@ def lsh_sieve(full_deltas, test_distance):
 
 def search_distance(full_deltas, distance):
     std = np.std(get_nnbs(full_deltas, distance))
+
     if std == 0:
-        return search_distance(full_deltas, distance/2)
+        # no poisoners
+        if distance < 1e-10:
+            return 0
+        else:
+            return search_distance(full_deltas, distance/2)
     std_left = np.std(get_nnbs(full_deltas, distance/2))
     std_right = np.std(get_nnbs(full_deltas, distance + distance/2))
     #print("Std_left: " + str(std_left) + "distance left: " + str(distance/2) + " Std_right: " + str(std_right) + "distance: " + str(distance))

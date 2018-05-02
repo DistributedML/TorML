@@ -106,10 +106,10 @@ if __name__ == "__main__":
     Xtest, ytest = full_model.get_data()
 
     models = ["mnist0", "mnist1", "mnist2", "mnist3", "mnist4",
-              "mnist5", "mnist6", "mnist7", "mnist8", "mnist9",
-              "mnist_bad_17", "mnist_bad_17", "mnist_bad_17", "mnist_bad_17",
-              "mnist_bad_17", "mnist_bad_17", "mnist_bad_17", "mnist_bad_17",
-              "mnist_bad_17", "mnist_bad_17","mnist_bad_17", "mnist_bad_17"]
+              "mnist5", "mnist6", "mnist7", "mnist8", "mnist9"]
+              # "mnist_bad_17", "mnist_bad_17", "mnist_bad_17", "mnist_bad_17",
+              # "mnist_bad_17", "mnist_bad_17", "mnist_bad_17", "mnist_bad_17",
+              # "mnist_bad_17", "mnist_bad_17","mnist_bad_17", "mnist_bad_17"]
 
     distance = 1.0 / (150 * 7840)
 
