@@ -69,6 +69,65 @@ def lsh_sieve(full_deltas, test_distance):
 
     return full_grad, heur_distance, nnbs
 
+#poisoned[i]: 0 for undefined, 1 for checked off good, 2 for poison
+def search_distance_euc2(full_deltas, distance, typical_set, prev, poisoned, last_distance):
+
+    nnbs, graph = get_nnbs_euc2(full_deltas, distance)
+    #first run
+    if len(prev) == 0:
+        return search_distance_euc2(full_deltas, distance/2, typical_set, nnbs, poisoned, distance)
+
+    #Keep halving till you reach the minimum value of search space: [1 1 ... 1]
+    if not(typical_set):
+        if np.sum(nnbs) != len(nnbs):
+            return search_distance_euc2(full_deltas, distance/2, typical_set, nnbs, poisoned, distance)
+        else:
+            return search_distance_euc2(full_deltas, distance, True, nnbs, poisoned, distance)
+
+    #### Found largest distance s.t nnbs = [1... 1] ####
+
+    #if distances make all nodes overlap, return the last_distance
+    if not(1 in nnbs):
+       return last_distance
+
+    new_poisoned = np.array(poisoned)
+    #while there are solo nodes left...
+    if 0 in poisoned:
+        for i in range(n):
+            if prev[i] == 1 and poisoned[i] == 0:
+                if nnbs[i] != 1:
+                    for j in range(n):
+                        if graph[i][j] == 1:
+                            if poisoned[j] == 2:
+                                new_poisoned[i] = 1
+                                break
+                            else:
+                                new_poisoned[i] = 2
+                                last_distance = distance
+                                break
+        return search_distance_euc2(full_deltas, distance*2, typical_set, nnbs, new_poisoned, last_distance)
+    else:
+        return last_distance
+
+
+def get_nnbs_euc2(full_deltas, distance):
+    deltas = np.reshape(full_deltas, (n, d))
+    centered_deltas = (deltas - np.mean(deltas, axis=0))
+
+    nnbs = []
+    graph = np.zeros((n, n))
+    for i in range(n):
+        nnb = 1
+        # Count nearby gradients within threshhold
+        for j in range(n):
+            # print(np.linalg.norm(centered_deltas[i] - centered_deltas[j]))
+            if i != j and np.linalg.norm(centered_deltas[i] - centered_deltas[j]) < distance:
+                nnb += 1
+                graph[i][j] += 1
+        nnbs.append(nnb)
+    return nnbs, graph
+
+
 def search_distance_euc(full_deltas, distance):
     std = np.std(get_nnbs_euc(full_deltas, distance))
 
@@ -87,6 +146,8 @@ def search_distance_euc(full_deltas, distance):
         return search_distance_euc(full_deltas, distance/2)
     else:
         return search_distance_euc(full_deltas, distance + distance/2)
+
+
 
 def search_distance_lsh(full_deltas, distance, prev_std, typical_set):
     std = np.std(get_nnbs_lsh(full_deltas, distance))
