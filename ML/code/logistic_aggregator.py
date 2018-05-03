@@ -218,7 +218,8 @@ def krum(full_deltas, dd, groupsize):
 
     # assume deltas is an array of size group * d
     deltas = np.reshape(full_deltas, (groupsize, dd))
-    return np.argmin(get_krum_scores(deltas, groupsize))
+    best_idx = np.argmin(get_krum_scores(deltas, groupsize))
+    return deltas[best_idx], 0
 
 
 def get_krum_scores(X, groupsize):
