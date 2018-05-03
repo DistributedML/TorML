@@ -16,6 +16,37 @@ import utils
 import pdb
 
 # Just a simple sandbox for testing out python code, without using Go.
+def faces_test():
+
+    dataset = "faces"
+    
+    batch_size = 10
+    iterations = 4000
+    epsilon = 5    
+
+    # Global
+    numFeatures = softmax_model.init(dataset, epsilon=epsilon)
+
+    print("Got " + str(numFeatures) + " features")
+
+    print("Start training")
+
+    weights = np.random.rand(numFeatures) / 1000.0
+
+    train_progress = np.zeros(iterations)
+    test_progress = np.zeros(iterations)
+
+    for i in xrange(iterations):
+        deltas = softmax_model.privateFun(1, weights, batch_size)
+        weights = weights + deltas
+
+        if i % 100 == 0:
+            print("Train error: %d", softmax_model_test.train_error(weights))
+            print("Test error: %d", softmax_model_test.test_error(weights))
+
+    print("Done iterations!")
+    print("Train error: %d", softmax_model_test.train_error(weights))
+    print("Test error: %d", softmax_model_test.test_error(weights))
 
 
 def basic_conv():
@@ -96,7 +127,7 @@ def attack_simulation(model_names, distance):
             num_printed += 1
             print("Train error: %.10f \t %d iterations left" % (error, progress))
             train_progress.append(error)
-            if num_printed >= 10 and train_progress[num_printed-10] - train_progress[num_printed-1] < 0.001):
+            if (num_printed >= 10 and train_progress[num_printed-10] - train_progress[num_printed-1] < 0.001):
                 print("Not improving much...Quiting...")
                 break
 
@@ -111,6 +142,10 @@ def attack_simulation(model_names, distance):
 
 
 if __name__ == "__main__":
+
+    faces_test()
+
+    pdb.set_trace()
 
     full_model = softmax_model_obj.SoftMaxModel("mnist_train", epsilon=1)
     Xtest, ytest = full_model.get_data()
