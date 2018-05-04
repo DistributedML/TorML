@@ -1,0 +1,28 @@
+chris@liskov:~/TorML/ML$ python code/ML_main.py
+Start training
+Train error: 0.7025500000 	 79 iterations left
+Train error: 0.1575000000 	 78 iterations left
+Train error: 0.1475833333 	 77 iterations left
+Train error: 0.1363000000 	 76 iterations left
+Train error: 0.1167666667 	 75 iterations left
+Train error: 0.1139333333 	 74 iterations left
+Train error: 0.1142833333 	 73 iterations left
+Train error: 0.0975666667 	 72 iterations left
+Train error: 0.1006333333 	 71 iterations left
+Train error: 0.1220500000 	 70 iterations left
+Train error: 0.1010166667 	 69 iterations left
+Train error: 0.1010666667 	 68 iterations left
+Train error: 0.1074666667 	 67 iterations left
+Train error: 0.1161500000 	 66 iterations left
+Not improving much...Quiting...
+Done iterations!
+('Train error: %d', 0.11615)
+('Test error: %d', 0.1129)
+Overall Error: 0.871549814112
+Target Training Accuracy on 1s: 0.981014535746
+Target Training Accuracy on misslabel 7s: 0.955945730247
+Target Attack Rate (1 to 7): 0.00266983091071
+
+--Return--
+> /home/chris/TorML/ML/code/ML_main.py(129)<module>()->None
+-> pdb.set_trace()
