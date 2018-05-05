@@ -22,5 +22,9 @@
 */pip-selfcheck.json
 scale_results
 
-ML/MNIST/*ubyte
-ML/data/mnist*.npy
+ML/mnist/*ubyte
+ML/data/mnist/*.npy
+ML/data/amazon/*.npy
+ML/data/kddcup/*.npy
+ML/data/*.zip
+ML/data/*.arff
