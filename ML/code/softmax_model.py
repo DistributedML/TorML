@@ -5,7 +5,7 @@ import utils
 import pdb
 import emcee
 
-lammy = 0.01
+lammy = 1e-2
 X = 0
 y = 0
 iteration = 1
@@ -16,7 +16,7 @@ epsilon = 0
 
 n_classes = 10
 
-scale = True
+scale = False
 diffpriv = False
 
 
