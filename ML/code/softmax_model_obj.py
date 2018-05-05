@@ -25,7 +25,7 @@ class SoftMaxModel:
         self.X = data['X']
 
         self.y = data['y']
-        self.n_classes = 10
+        self.n_classes = 23
 
         # Different for softmax
         self.d = self.X.shape[1] * self.n_classes

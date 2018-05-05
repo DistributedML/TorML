@@ -3,7 +3,29 @@ import pandas as pd
 import pdb
 
 
-def eval(Xtest, ytest, weights, correctLabel, missLabel):
+def kdd_eval(Xtest, ytest, weights, correctLabel, missLabel):
+
+    # hardcoded for MNIST
+    W = np.reshape(weights, (23, 41))
+    yhat = np.argmax(np.dot(Xtest, W.T), axis=1)
+
+    targetIdx = np.where(ytest == correctLabel)
+    otherIdx = np.where(ytest != correctLabel)
+    overall = np.mean(yhat[otherIdx] == ytest[otherIdx])
+    correct1 = np.mean(yhat[targetIdx] == correctLabel)
+    attacked1 = np.mean(yhat[targetIdx] == missLabel)
+
+    misslabel_idx = np.where(ytest == missLabel)
+    misslabel_correct = np.mean(yhat[misslabel_idx] == missLabel)
+
+    print("Overall Error: " + str(overall))
+    print("Target Training Accuracy on " + str(correctLabel) + "s: " + str(correct1))
+    print("Target Training Accuracy on misslabel " + str(missLabel) + "s: " + str(misslabel_correct))
+    print("Target Attack Rate (" + str(correctLabel) + " to " + str(missLabel) + "): " + str(attacked1)  + "\n")
+    return attacked1
+
+
+def mnist_eval(Xtest, ytest, weights, correctLabel, missLabel):
 
     # hardcoded for MNIST
     W = np.reshape(weights, (10, 784))

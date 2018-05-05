@@ -69,7 +69,8 @@ def lsh_sieve(full_deltas, test_distance):
 
     return full_grad, heur_distance, nnbs
 
-#poisoned[i]: 0 for undefined, 1 for checked off good, 2 for poison
+
+# poisoned[i]: 0 for undefined, 1 for checked off good, 2 for poison
 def search_distance_euc2(full_deltas, distance, typical_set, prev, poisoned, last_distance):
 
     nnbs, graph = get_nnbs_euc2(full_deltas, distance)
@@ -249,7 +250,9 @@ def euclidean_binning_hm(full_deltas, distance):
 
     return full_grad, distance, nnbs
 
+
 def euclidean_binning(full_deltas, distance):
+
     deltas = np.reshape(full_deltas, (n, d))
     centered_deltas = (deltas - np.mean(deltas, axis=0))
 
@@ -268,7 +271,8 @@ def euclidean_binning(full_deltas, distance):
 
     return full_grad, nnbs
 
-def average(full_deltas, d, n):
+
+def average(full_deltas):
 
     deltas = np.reshape(full_deltas, (n, d))
     return np.mean(deltas, axis=0), 0
