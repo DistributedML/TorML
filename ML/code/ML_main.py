@@ -25,65 +25,6 @@ def debug_signal_handler(signal, frame):
 import signal
 signal.signal(signal.SIGINT, debug_signal_handler)
 
-def kdd_test():
-
-    dataset = "kddcup/kddcup_train"
-
-    batch_size = 100
-    iterations = 4000
-    epsilon = 5
-
-    # Global
-    numFeatures = softmax_model.init(dataset, epsilon=epsilon)
-
-    print("Got " + str(numFeatures) + " features")
-
-    print("Start training")
-
-    weights = np.random.rand(numFeatures) / 1000.0
-
-    for i in xrange(iterations):
-        deltas = softmax_model.privateFun(1, weights, batch_size)
-        weights = weights + deltas
-
-        if i % 100 == 0:
-            print("Train error: %d", softmax_model_test.train_error(weights))
-            print("Test error: %d", softmax_model_test.test_error(weights))
-
-    print("Done iterations!")
-    print("Train error: %d", softmax_model_test.train_error(weights))
-    print("Test error: %d", softmax_model_test.test_error(weights))
-
-
-def faces_test():
-
-    dataset = "faces"
-
-    batch_size = 10
-    iterations = 4000
-    epsilon = 5
-
-    # Global
-    numFeatures = softmax_model.init(dataset, epsilon=epsilon)
-
-    print("Got " + str(numFeatures) + " features")
-
-    print("Start training")
-
-    weights = np.random.rand(numFeatures) / 1000.0
-
-    for i in xrange(iterations):
-        deltas = softmax_model.privateFun(1, weights, batch_size)
-        weights = weights + deltas
-
-        if i % 100 == 0:
-            print("Train error: %d", softmax_model_test.train_error(weights))
-            print("Test error: %d", softmax_model_test.test_error(weights))
-
-    print("Done iterations!")
-    print("Train error: %d", softmax_model_test.train_error(weights))
-    print("Test error: %d", softmax_model_test.test_error(weights))
-
 
 def basic_conv():
 
@@ -170,69 +111,6 @@ def non_iid(model_names):
     print("Test error: %d", softmax_model_test.test_error(weights))
     return weights
 
-
-def attack_simulation(model_names, distance):
-
-    batch_size = 10
-    iterations = 4000
-    epsilon = 5
-    numFeatures = 7840
-
-    list_of_models = []
-
-    print_interval = 50
-    progress = iterations/print_interval
-    num_printed = 0
-
-    for dataset in model_names:
-        list_of_models.append(softmax_model_obj.SoftMaxModel(dataset, epsilon=epsilon))
-
-    numClients = len(list_of_models)
-    logistic_aggregator.init(numClients, numFeatures)
-
-    print("Start training")
-
-    weights = np.random.rand(numFeatures) / 1000.0
-    heur_distances = np.zeros(iterations)
-    train_progress = []
-
-    for i in xrange(iterations):
-
-        total_delta = np.zeros((numClients, numFeatures))
-
-        for k in range(len(list_of_models)):
-            total_delta[k, :] = list_of_models[k].privateFun(1, weights, batch_size)
-        #distance = logistic_aggregator.search_distance_lsh2(total_delta, 1.0, False, [], np.zeros(numClients), 0)
-        #delta, heur_dist, nnbs = logistic_aggregator.lsh_greedy(total_delta, distance)
-        #distance = logistic_aggregator.search_distance_lsh(total_delta, 1.0, -float('Inf'), False)
-        #delta, hm, nnbs = logistic_aggregator.lsh_sieve(total_delta, distance)
-        distance = logistic_aggregator.search_distance_euc2(total_delta, 1.0, False, [], np.zeros(numClients), 0)
-        delta, dist, nnbs = logistic_aggregator.euclidean_binning_hm(total_delta, distance)
-        #print(distance)
-        #print(nnbs)
-
-        heur_distances[i] = distance
-        weights = weights + delta
-
-        if i % 50 == 0:
-            error = softmax_model_test.train_error(weights)
-            progress -= 1
-            num_printed += 1
-            print("Train error: %.10f \t %d iterations left" % (error, progress))
-            train_progress.append(error)
-
-            if (num_printed >= 10 and train_progress[num_printed-10] - train_progress[num_printed-1] < 0.001):
-                print("Not improving much...Quiting...")
-                break
-
-    # fig = plt.figure()
-    # plt.plot(heur_distances)
-    # fig.savefig("heur_distances.jpeg")
-
-    print("Done iterations!")
-    print("Train error: %d", softmax_model_test.train_error(weights))
-    print("Test error: %d", softmax_model_test.test_error(weights))
-    return weights
 
 #amazon: 50 classes, 10000 features
 #mnist: 10 classes, 784 features
