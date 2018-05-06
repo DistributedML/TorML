@@ -89,9 +89,13 @@ def non_iid(model_names, numClasses, numParams, softmax_test):
         #distance, p = logistic_aggregator.search_distance_euc2(total_delta, 1.0, False, [], np.zeros(numClients), 0)
         #print(distance)
         #distance = .11
-        distance, poisoned = logistic_aggregator.search_distance_euc(total_delta, np.random.rand()*10, False, [], np.zeros(numClients), 0)
+        #np.random.rand()*10
+        initial_distance = np.random.rand()*10
+        scs = logistic_aggregator.get_cos_similarity(total_delta)
+        distance, poisoned = logistic_aggregator.search_distance_euc(total_delta, initial_distance, False, [], np.zeros(numClients), 0, scs)
         #pdb.set_trace()
-        delta, dist, nnbs = logistic_aggregator.euclidean_binning_hm(total_delta, distance, logistic_aggregator.get_nnbs_euc_cos)
+        print(distance)
+        delta, dist, nnbs = logistic_aggregator.euclidean_binning_hm(total_delta, distance, logistic_aggregator.get_nnbs_euc_cos, scs)
 
         #poisoned += p
         weights = weights + delta

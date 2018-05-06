@@ -33,21 +33,21 @@ Increase distance by factor of 2 and label nodes as:
 
 poisoned[i]: 0 for undefined, 1 for checked off good, 2 for poison
 '''
-def search_distance_euc(full_deltas, distance, typical_set, prev, poisoned, last_distance):
+def search_distance_euc(full_deltas, distance, typical_set, prev, poisoned, last_distance, scs):
 
-    nnbs, graph = get_nnbs_euc_cos(full_deltas, distance)
+    nnbs, graph = get_nnbs_euc_cos(full_deltas, distance, scs)
     #first run
     if len(prev) == 0:
-        return search_distance_euc(full_deltas, distance/2, typical_set, nnbs, poisoned, distance)
+        return search_distance_euc(full_deltas, distance/2, typical_set, nnbs, poisoned, distance, scs)
 
     if distance <= 0.00000001:
         return last_distance, poisoned
     #Keep halving till you reach the minimum value of search space: [1 1 ... 1]
     if not(typical_set):
         if np.sum(nnbs) != len(nnbs):
-            return search_distance_euc(full_deltas, distance/2, typical_set, nnbs, poisoned, distance)
+            return search_distance_euc(full_deltas, distance/2, typical_set, nnbs, poisoned, distance, scs)
         else:
-            return search_distance_euc(full_deltas, distance, True, nnbs, poisoned, distance)
+            return search_distance_euc(full_deltas, distance, True, nnbs, poisoned, distance, scs)
 
     #### Found largest distance s.t nnbs = [1... 1] ####
 
@@ -73,7 +73,7 @@ def search_distance_euc(full_deltas, distance, typical_set, prev, poisoned, last
                                 new_poisoned[i] = 2
                                 last_distance = distance
                                 break
-        return search_distance_euc(full_deltas, distance *2, typical_set, nnbs, new_poisoned, last_distance)
+        return search_distance_euc(full_deltas, distance *2, typical_set, nnbs, new_poisoned, last_distance, scs)
     else:
         return last_distance, poisoned
 
@@ -83,10 +83,10 @@ Given a distance, update the hit matrix using get_nnbs_
 Calculate new edge weights based on the heuristic that benefits nodes that collude with poisoners often
 Weight gradients based on logit
 '''
-def euclidean_binning_hm(full_deltas, distance, get_nnbs):
+def euclidean_binning_hm(full_deltas, distance, get_nnbs, scs):
     full_grad = np.zeros(d)
     deltas = np.reshape(full_deltas, (n, d))
-    nnbs, graph = get_nnbs(full_deltas, distance)
+    nnbs, graph = get_nnbs(full_deltas, distance, scs)
     graph = graph - np.eye(n)
 
     #Update global hit_matrix
@@ -135,12 +135,12 @@ def euclidean_binning_hm(full_deltas, distance, get_nnbs):
 '''
 Returns the hit matrix and nnbs from binning distance away in cosine similarity
 '''
-def get_nnbs_euc_cos(full_deltas, distance):
-    deltas = np.reshape(full_deltas, (n, d))
-    centered_deltas = (deltas - np.mean(deltas, axis=0))
+def get_nnbs_euc_cos(full_deltas, distance, scs):
+    # deltas = np.reshape(full_deltas, (n, d))
+    # centered_deltas = (deltas - np.mean(deltas, axis=0))
 
     nnbs = []
-    graph = (smp.cosine_similarity(centered_deltas) >= (1-distance)).astype(int)
+    graph = (scs >= (1-distance)).astype(int)
     nnbs = np.sum(graph, axis=1)
     return nnbs, graph
 
@@ -162,7 +162,13 @@ def get_nnbs_euc(full_deltas, distance):
         nnbs.append(nnb)
     return nnbs, graph
 
-
+'''
+Return
+'''
+def get_cos_similarity(full_deltas):
+    deltas = np.reshape(full_deltas, (n, d))
+    centered_deltas = (deltas - np.mean(deltas, axis=0))
+    return smp.cosine_similarity(centered_deltas)
 
 
 def average(full_deltas, d, n):
