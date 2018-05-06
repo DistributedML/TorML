@@ -15,6 +15,7 @@ import utils
 
 import pdb
 import sys
+np.set_printoptions(suppress=True)
 
 # Just a simple sandbox for testing out python code, without using Go.
 
@@ -59,7 +60,7 @@ def basic_conv():
 def non_iid(model_names, numClasses, numParams, softmax_test):
 
     batch_size = 10
-    iterations = 500
+    iterations = 5000
     epsilon = 5
 
     list_of_models = []
@@ -88,7 +89,7 @@ def non_iid(model_names, numClasses, numParams, softmax_test):
         #distance, p = logistic_aggregator.search_distance_euc2(total_delta, 1.0, False, [], np.zeros(numClients), 0)
         #print(distance)
         #distance = .11
-        distance, poisoned = logistic_aggregator.search_distance_euc(total_delta, 1.0, False, [], np.zeros(numClients), 0)
+        distance, poisoned = logistic_aggregator.search_distance_euc(total_delta, np.random.rand()*10, False, [], np.zeros(numClients), 0)
         #pdb.set_trace()
         delta, dist, nnbs = logistic_aggregator.euclidean_binning_hm(total_delta, distance, logistic_aggregator.get_nnbs_euc_cos)
 

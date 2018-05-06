@@ -52,7 +52,7 @@ def search_distance_euc(full_deltas, distance, typical_set, prev, poisoned, last
     #### Found largest distance s.t nnbs = [1... 1] ####
 
     #if distances make all nodes overlap, return the last_distance
-    if distance >= 0.5:
+    if distance >= 0.75:
         return last_distance, poisoned
 
     if not(1 in nnbs):
