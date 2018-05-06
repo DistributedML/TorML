@@ -81,6 +81,7 @@ def non_iid(model_names, numClasses, numParams, softmax_test):
     hm_per_it = []
     poisoned = np.zeros(numClients)
 
+    cs = np.zeros((numClients, numClients))
     for i in xrange(iterations):
 
         total_delta = np.zeros((numClients, numParams))
@@ -96,13 +97,11 @@ def non_iid(model_names, numClasses, numParams, softmax_test):
         #np.random.rand()*10
         initial_distance = np.random.rand()*10
         scs = logistic_aggregator.get_cos_similarity(total_delta)
-        #print(np.var(scs))
+        cs = cs + scs
         distance, poisoned = logistic_aggregator.search_distance_euc(total_delta, initial_distance, False, [], np.zeros(numClients), 0, scs)
-        #pdb.set_trace()
-        #print(distance)
         delta, dist, nnbs = logistic_aggregator.euclidean_binning_hm(total_delta, distance, logistic_aggregator.get_nnbs_euc_cos, scs)
 
-        #poisoned += p
+        #delta = logistic_aggregator.cos_aggregate(total_delta, cs, i)
         weights = weights + delta
 
         if i % 100 == 0:
