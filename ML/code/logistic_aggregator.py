@@ -21,6 +21,11 @@ def init(num_clients, num_features):
     global hit_matrix
     hit_matrix = np.zeros((n, n))
 
+    global cosine_similarity
+    cosine_similarity = np.zeros((n,n))
+
+
+
 
 
 
@@ -34,7 +39,7 @@ Increase distance by factor of 2 and label nodes as:
 poisoned[i]: 0 for undefined, 1 for checked off good, 2 for poison
 '''
 def search_distance_euc(full_deltas, distance, typical_set, prev, poisoned, last_distance, scs):
-    
+
     nnbs, graph = get_nnbs_euc_cos(full_deltas, distance, scs)
     #first run
     if len(prev) == 0:
@@ -169,6 +174,15 @@ def get_cos_similarity(full_deltas):
     deltas = np.reshape(full_deltas, (n, d))
     centered_deltas = (deltas - np.mean(deltas, axis=0))
     return smp.cosine_similarity(centered_deltas)
+
+def cos_aggregate(full_deltas, scs):
+    global cosine_similarity
+    cosine_similarity = cosine_similarity + scs
+
+    global it
+    it += 1
+
+
 
 
 def average(full_deltas, d, n):
