@@ -60,7 +60,7 @@ def basic_conv():
 def non_iid(model_names, numClasses, numParams, softmax_test):
 
     batch_size = 10
-    iterations = 5000
+    iterations = 100
     epsilon = 5
 
     list_of_models = []
@@ -152,4 +152,4 @@ if __name__ == "__main__":
         from_idx = int(attack[1])
         to_idx = int(attack[2])
         score = poisoning_compare.eval(Xtest, ytest, weights, from_idx, to_idx, numClasses, numFeatures)
-    pdb.set_trace()
+    #pdb.set_trace()
