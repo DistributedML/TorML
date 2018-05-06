@@ -59,7 +59,7 @@ def basic_conv():
 def non_iid(model_names, numClasses, numParams, softmax_test):
 
     batch_size = 10
-    iterations = 200
+    iterations = 500
     epsilon = 5
 
     list_of_models = []
@@ -87,7 +87,9 @@ def non_iid(model_names, numClasses, numParams, softmax_test):
         # delta, dist, nnbs = logistic_aggregator.euclidean_binning_hm(total_delta, distance)
         #distance, p = logistic_aggregator.search_distance_euc2(total_delta, 1.0, False, [], np.zeros(numClients), 0)
         #print(distance)
-        distance = .11
+        #distance = .11
+        distance, poisoned = logistic_aggregator.search_distance_euc(total_delta, 1.0, False, [], np.zeros(numClients), 0)
+        #pdb.set_trace()
         delta, dist, nnbs = logistic_aggregator.euclidean_binning_hm(total_delta, distance, logistic_aggregator.get_nnbs_euc_cos)
 
         #poisoned += p
@@ -124,8 +126,8 @@ if __name__ == "__main__":
         numFeatures = 10000
     else:
         print("Dataset " + dataset + " not found. Available datasets: mnist kddcup amazon")
-    numParams = numClasses * numFeatures
 
+    numParams = numClasses * numFeatures
     dataPath = dataset + "/" + dataset
 
     full_model = softmax_model_obj.SoftMaxModel(dataPath + "_train", 1, numClasses)
@@ -149,3 +151,4 @@ if __name__ == "__main__":
         from_idx = int(attack[1])
         to_idx = int(attack[2])
         score = poisoning_compare.eval(Xtest, ytest, weights, from_idx, to_idx, numClasses, numFeatures)
+    pdb.set_trace()
