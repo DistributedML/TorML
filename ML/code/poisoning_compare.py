@@ -22,7 +22,7 @@ def eval(Xtest, ytest, weights, correctLabel, missLabel, numClasses, numFeatures
     print("Target Training Accuracy on " + str(correctLabel) + "s: " + str(correct1))
     print("Target Training Accuracy on misslabel " + str(missLabel) + "s: " + str(misslabel_correct))
     print("Target Attack Rate (" + str(correctLabel) + " to " + str(missLabel) + "): " + str(attacked1)  + "\n")
-    return attacked1
+    return overall, correct1, misslabel_correct, attacked1
 
 
 

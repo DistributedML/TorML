@@ -14,6 +14,8 @@ def main():
     # Shuffle the data
     data = data[sfflidx]
 
+    print(data.shape)
+
     testidx = int(data.shape[0] * 0.7)
 
     testdata = data[testidx:, ]
@@ -29,6 +31,9 @@ def main():
         print("Label " + str(i) + " has " + str(len(idx)))
         labeldata = traindata[idx]
         np.save("kddcup" + str(i), labeldata)
+
+        ovridx = np.where(data[:, 41] == i)[0]
+        print("Overall, label " + str(i) + " has " + str(len(ovridx)))
 
     np.save("kddcup_train", traindata)
     np.save("kddcup_test", testdata)

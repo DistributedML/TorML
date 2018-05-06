@@ -62,7 +62,7 @@ def basic_conv():
 def non_iid(model_names, numClasses, numParams, softmax_test):
 
     batch_size = 10
-    iterations = 3000
+    iterations = 4000
     epsilon = 5
 
     list_of_models = []
@@ -87,23 +87,21 @@ def non_iid(model_names, numClasses, numParams, softmax_test):
         for k in range(len(list_of_models)):
             total_delta[k, :] = list_of_models[k].privateFun(1, weights, batch_size)
 
-        # distance, p = logistic_aggregator.search_distance_euc2(total_delta, 1.0, False, [], np.zeros(numClients), 0)
-        # delta, dist, nnbs = logistic_aggregator.euclidean_binning_hm(total_delta, distance)
-        #distance, p = logistic_aggregator.search_distance_euc2(total_delta, 1.0, False, [], np.zeros(numClients), 0)
-        #print(distance)
-        #distance = .11
-        #np.random.rand()*10
-        initial_distance = np.random.rand()*10
-        scs = logistic_aggregator.get_cos_similarity(total_delta)
-        distance, poisoned = logistic_aggregator.search_distance_euc(total_delta, initial_distance, False, [], np.zeros(numClients), 0, scs)
-        #pdb.set_trace()
-        print(distance)
-        delta, dist, nnbs = logistic_aggregator.euclidean_binning_hm(total_delta, distance, logistic_aggregator.get_nnbs_euc_cos, scs)
+        # Nothing
+        delta = logistic_aggregator.krum(total_delta, 5)
 
-        #poisoned += p
+        # Krum
+
+        # Our solution
+        # distance, poisoned = logistic_aggregator.search_distance_euc(
+        #     total_delta, np.random.rand() * 10, False, [], np.zeros(numClients), 0)
+        # delta, dist, nnbs = logistic_aggregator.euclidean_binning_hm(
+        #     total_delta, distance, logistic_aggregator.get_nnbs_euc_cos)
+
+        # poisoned += p
         weights = weights + delta
 
-        if i % 100 == 0:
+        if i % 400 == 0:
             error = softmax_test.train_error(weights)
             print("Train error: %.10f" % error)
             train_progress.append(error)
@@ -141,20 +139,31 @@ if __name__ == "__main__":
     full_model = softmax_model_obj.SoftMaxModel(dataPath + "_train", 1, numClasses)
     Xtest, ytest = full_model.get_data()
 
-    models = []
+    # Over poisoners from 0 to 9
+    results = np.zeros((10, 4))
 
-    for i in range(numClasses):
-        models.append(dataPath + str(i))
+    for exp in range(10):
 
-    for attack in argv[1:]:
-        for i in range(int(attack[0])):
-            models.append(dataPath + "_bad_" + attack[1:])
+        print("Start attack with " + str(exp))
+        attack = "17"
+        models = []
 
-    softmax_test = softmax_model_test.SoftMaxModelTest(dataset, numClasses, numFeatures)
-    weights = non_iid(models, numClasses, numParams, softmax_test)
+        for i in range(numClasses):
+            models.append(dataPath + str(i))
 
-    for attack in argv[1:]:
-        from_idx = int(attack[1])
-        to_idx = int(attack[2])
-        score = poisoning_compare.eval(Xtest, ytest, weights, from_idx, to_idx, numClasses, numFeatures)
-    # pdb.set_trace()
+        for i in range(exp):
+            models.append(dataPath + "_bad_" + attack)
+
+        softmax_test = softmax_model_test.SoftMaxModelTest(dataset, numClasses, numFeatures)
+        weights = non_iid(models, numClasses, numParams, softmax_test)
+
+        overall, correct, misslabel_correct, attacked = poisoning_compare.eval(
+            Xtest, ytest, weights, 1, 7, numClasses, numFeatures)
+
+        results[exp, 0] = overall
+        results[exp, 1] = correct
+        results[exp, 2] = misslabel_correct
+        results[exp, 3] = attacked
+
+    np.savetxt("fig1results_krum.csv", results, delimiter=',')
+    pdb.set_trace()
