@@ -1,8 +1,8 @@
 #!/bin/bash
 
-for i in `seq 0 10`;
+for i in `seq 0 9`;
 do
-  for j in `seq 0 10`;
+  for j in `seq 0 9`;
   do
     python code/misslabel_mnist.py "$i" "$j"
   done

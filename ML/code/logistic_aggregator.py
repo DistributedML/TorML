@@ -52,7 +52,7 @@ def search_distance_euc(full_deltas, distance, typical_set, prev, poisoned, last
     #### Found largest distance s.t nnbs = [1... 1] ####
 
     #if distances make all nodes overlap, return the last_distance
-    if distance >= 0.75:
+    if distance >= 0.4:
         return last_distance, poisoned
 
     if not(1 in nnbs):
@@ -73,7 +73,7 @@ def search_distance_euc(full_deltas, distance, typical_set, prev, poisoned, last
                                 new_poisoned[i] = 2
                                 last_distance = distance
                                 break
-        return search_distance_euc(full_deltas, distance*2, typical_set, nnbs, new_poisoned, last_distance)
+        return search_distance_euc(full_deltas, distance + 0.05, typical_set, nnbs, new_poisoned, last_distance)
     else:
         return last_distance, poisoned
 
@@ -87,7 +87,7 @@ def euclidean_binning_hm(full_deltas, distance, get_nnbs):
     full_grad = np.zeros(d)
     deltas = np.reshape(full_deltas, (n, d))
     nnbs, graph = get_nnbs(full_deltas, distance)
-    graph -= np.eye(n)
+    graph = graph - np.eye(n)
 
     #Update global hit_matrix
     global hit_matrix
@@ -104,11 +104,14 @@ def euclidean_binning_hm(full_deltas, distance, get_nnbs):
             # add 1 for divby0 and so that poisoners don't benefit from this
             if (collusions[j] > collusions[i]):
                 new_hm[i][j] = hit_matrix[i][j] / (np.abs(collusions[i] - collusions[j]) + 1)
+            else:
+                new_hm[i][j] = hit_matrix[i][j]
 
     global it
     it += 1
     # Take the inverse L2 norm
     wv = 1 / (np.linalg.norm(new_hm, axis=1) + 1)
+    print(wv)
 
     wv = (np.log(wv / (1 - wv)) + 0.5)
     wv[(np.isinf(wv) + wv > 1)] = 1
