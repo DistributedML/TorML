@@ -89,12 +89,7 @@ def non_iid(model_names, numClasses, numParams, softmax_test):
         for k in range(len(list_of_models)):
             total_delta[k, :] = list_of_models[k].privateFun(1, weights, batch_size)
 
-        # distance, p = logistic_aggregator.search_distance_euc2(total_delta, 1.0, False, [], np.zeros(numClients), 0)
-        # delta, dist, nnbs = logistic_aggregator.euclidean_binning_hm(total_delta, distance)
-        #distance, p = logistic_aggregator.search_distance_euc2(total_delta, 1.0, False, [], np.zeros(numClients), 0)
-        #print(distance)
-        #distance = .11
-        #np.random.rand()*10
+
         initial_distance = np.random.rand()*10
         scs = logistic_aggregator.get_cos_similarity(total_delta)
         cs = cs + scs

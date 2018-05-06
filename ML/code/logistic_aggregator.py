@@ -177,8 +177,8 @@ def get_cos_similarity(full_deltas):
 
 def cos_aggregate(full_deltas, cs, i):
     ncs = cs - i*np.eye(n)
-
-
+    wv = 1 - np.max(ncs, axis=1) / i
+    
 
 
 def average(full_deltas, d, n):
