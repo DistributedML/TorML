@@ -42,29 +42,39 @@ def search_distance_euc(full_deltas, distance, typical_set, prev, poisoned, last
 
     nnbs, graph = get_nnbs_euc_cos(full_deltas, distance, scs)
     #first run
+
     if len(prev) == 0:
         return search_distance_euc(full_deltas, distance/2, typical_set, nnbs, poisoned, distance, scs)
 
-    if distance <= 0.00000001:
-        return last_distance, poisoned
-    #Keep halving till you reach the minimum value of search space: [1 1 ... 1]
+    # Keep halving till you reach the minimum value of search space: [1 1 ... 1]
     if not(typical_set):
+
+        if distance <= 0.00000001:
+            idx = np.where(nnbs != 1)
+            poisoned[idx] = 2
+            return search_distance_euc(full_deltas, distance, True, nnbs, poisoned, distance, scs)
+
         if np.sum(nnbs) != len(nnbs):
             return search_distance_euc(full_deltas, distance/2, typical_set, nnbs, poisoned, distance, scs)
         else:
             return search_distance_euc(full_deltas, distance, True, nnbs, poisoned, distance, scs)
 
+
+
     #### Found largest distance s.t nnbs = [1... 1] ####
 
-    #if distances make all nodes overlap, return the last_distance
-    if distance >= 1:
+    # if distances make all nodes overlap, return the last_distance
+    if distance >= 0.8:
         return last_distance, poisoned
 
     if not(1 in nnbs):
        return last_distance, poisoned
 
+    # Jump size
+    jump = np.var(smp.cosine_similarity(full_deltas)) * 0.1
+
     new_poisoned = np.array(poisoned)
-    #while there are solo nodes left...
+    # while there are solo nodes left...
     if 0 in poisoned:
         for i in range(n):
             if prev[i] == 1 and poisoned[i] == 0:
@@ -78,6 +88,7 @@ def search_distance_euc(full_deltas, distance, typical_set, prev, poisoned, last
                                 new_poisoned[i] = 2
                                 last_distance = distance
                                 break
+
         return search_distance_euc(full_deltas, distance *2, typical_set, nnbs, new_poisoned, last_distance, scs)
     else:
         return last_distance, poisoned
@@ -120,8 +131,6 @@ def euclidean_binning_hm(full_deltas, distance, get_nnbs, scs):
 
     # Rescale so that max value is wv
     wv = wv / np.max(wv)
-
-    # print(wv)
 
     # Logit function (map 0-1 space to inf)
     wv = (np.log(wv / (1 - wv)) + 0.5)
@@ -185,19 +194,20 @@ def cos_aggregate(full_deltas, scs):
 
 
 
-def average(full_deltas, d, n):
+def average(full_deltas):
 
     deltas = np.reshape(full_deltas, (n, d))
-    return np.mean(deltas, axis=0), 0
+    return np.mean(deltas, axis=0)
 
 
 # Returns the index of the row that should be used in Krum
-def krum(full_deltas, dd, groupsize):
+def krum(deltas, clip):
 
     # assume deltas is an array of size group * d
-    deltas = np.reshape(full_deltas, (groupsize, dd))
-    best_idx = np.argmin(get_krum_scores(deltas, groupsize))
-    return deltas[best_idx], 0
+    scores = get_krum_scores(deltas, n - clip)
+
+    good_idx = np.argpartition(scores, n - clip)[:(n - clip)]
+    return np.mean(deltas[good_idx], axis=0)
 
 
 def get_krum_scores(X, groupsize):

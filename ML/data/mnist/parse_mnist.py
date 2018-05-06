@@ -82,8 +82,9 @@ def slice_for_tm():
 
     # standardize each column
     print("Standardize columns")
-    Xtrain, _, _ = standardize_cols(Xtrain)
-    Xtest, _, _ = standardize_cols(Xtest)
+    Xtrain = Xtrain / 100.0
+    # Xtrain, _, _ = standardize_cols(Xtrain)
+    # Xtest, _, _ = standardize_cols(Xtest)
 
     for k in range(10):
 
