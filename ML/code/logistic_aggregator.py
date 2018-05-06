@@ -34,7 +34,7 @@ Increase distance by factor of 2 and label nodes as:
 poisoned[i]: 0 for undefined, 1 for checked off good, 2 for poison
 '''
 def search_distance_euc(full_deltas, distance, typical_set, prev, poisoned, last_distance, scs):
-
+    
     nnbs, graph = get_nnbs_euc_cos(full_deltas, distance, scs)
     #first run
     if len(prev) == 0:
