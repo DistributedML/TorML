@@ -15,7 +15,6 @@ import utils
 
 import pdb
 import sys
-import json
 
 # Just a simple sandbox for testing out python code, without using Go.
 
@@ -57,31 +56,30 @@ def basic_conv():
     print("Test error: %d", softmax_model_test.test_error(weights))
 
 
-def non_iid(model_names):
+def non_iid(model_names, numClasses, numParams, softmax_test):
 
     batch_size = 10
-    iterations = 10000
+    iterations = 200
     epsilon = 5
-    #numFeatures = 943
-    numFeatures = 7840
+
     list_of_models = []
 
     for dataset in model_names:
-        list_of_models.append(softmax_model_obj.SoftMaxModel(dataset, epsilon))
+        list_of_models.append(softmax_model_obj.SoftMaxModel(dataset, epsilon, numClasses))
 
     numClients = len(list_of_models)
-    logistic_aggregator.init(numClients, numFeatures)
+    logistic_aggregator.init(numClients, numParams)
 
     print("Start training across " + str(numClients) + " clients.")
 
-    weights = np.random.rand(numFeatures) / 100.0
+    weights = np.random.rand(numParams) / 100.0
     train_progress = []
     poisoned_per_it = []
     hm_per_it = []
     poisoned = np.zeros(numClients)
     for i in xrange(iterations):
 
-        total_delta = np.zeros((numClients, numFeatures))
+        total_delta = np.zeros((numClients, numParams))
 
         for k in range(len(list_of_models)):
             total_delta[k, :] = list_of_models[k].privateFun(1, weights, batch_size)
@@ -90,25 +88,21 @@ def non_iid(model_names):
         #distance, p = logistic_aggregator.search_distance_euc2(total_delta, 1.0, False, [], np.zeros(numClients), 0)
         #print(distance)
         distance = .11
-        delta, dist, nnbs = logistic_aggregator.euclidean_binning_hm(total_delta, distance)
+        delta, dist, nnbs = logistic_aggregator.euclidean_binning_hm(total_delta, distance, logistic_aggregator.get_nnbs_euc_cos)
 
         #poisoned += p
         weights = weights + delta
 
         if i % 100 == 0:
-            error = softmax_model_test.train_error(weights)
+            error = softmax_test.train_error(weights)
             print("Train error: %.10f" % error)
             train_progress.append(error)
             hm_per_it.append(np.matrix(logistic_aggregator.hit_matrix))
             poisoned_per_it.append(list(poisoned))
 
-    # fig = plt.figure()
-    # plt.plot(heur_distances)
-    # fig.savefig("heur_distances.jpeg")
-    # pdb.set_trace()
     print("Done iterations!")
-    print("Train error: %d", softmax_model_test.train_error(weights))
-    print("Test error: %d", softmax_model_test.test_error(weights))
+    print("Train error: %d", softmax_test.train_error(weights))
+    print("Test error: %d", softmax_test.test_error(weights))
     return weights
 
 
@@ -116,21 +110,42 @@ def non_iid(model_names):
 #mnist: 10 classes, 784 features
 #kdd: 23 classes, 41 features
 if __name__ == "__main__":
+    argv = sys.argv[1:]
+    dataset = argv[0]
 
-    full_model = softmax_model_obj.SoftMaxModel("mnist/mnist_train", epsilon=1)
+    if (dataset == "mnist"):
+        numClasses = 10
+        numFeatures = 784
+    elif (dataset == "kddcup"):
+        numClasses = 23
+        numFeatures = 41
+    elif (dataset == "amazon"):
+        numClasses = 50
+        numFeatures = 10000
+    else:
+        print("Dataset " + dataset + " not found. Available datasets: mnist kddcup amazon")
+    numParams = numClasses * numFeatures
+
+    dataPath = dataset + "/" + dataset
+
+    full_model = softmax_model_obj.SoftMaxModel(dataPath + "_train", 1, numClasses)
     Xtest, ytest = full_model.get_data()
 
     models = []
 
-    for i in range(10):
-        models.append("mnist/mnist" + str(i))
+    for i in range(numClasses):
+        models.append(dataPath + str(i))
 
-    models.append("mnist/mnist_bad_17")
-    models.append("mnist/mnist_bad_17")
-    models.append("mnist/mnist_bad_17")
+    for attack in argv[1:]:
+        for i in range(int(attack[0])):
+            models.append(dataPath + "_bad_" + attack[1:])
 
-    weights = non_iid(models)
-    pdb.set_trace()
-    score = poisoning_compare.mnist_eval(Xtest, ytest, weights, 1, 7)
-    # score = poisoning_compare.eval(Xtest, ytest, weights, 1, 7)
-    pdb.set_trace()
+
+    softmax_test = softmax_model_test.SoftMaxModelTest(dataset, numClasses, numFeatures)
+    weights = non_iid(models, numClasses, numParams, softmax_test)
+
+
+    for attack in argv[1:]:
+        from_idx = int(attack[1])
+        to_idx = int(attack[2])
+        score = poisoning_compare.eval(Xtest, ytest, weights, from_idx, to_idx, numClasses, numFeatures)

@@ -17,7 +17,7 @@ diffpriv = False
 
 class SoftMaxModel:
 
-    def __init__(self, dataset, epsilon):
+    def __init__(self, dataset, epsilon, numClasses):
 
         passedEpsilon = epsilon
         data = utils.load_dataset(dataset, npy=True)
@@ -25,7 +25,7 @@ class SoftMaxModel:
         self.X = data['X']
 
         self.y = data['y']
-        self.n_classes = 10
+        self.n_classes = numClasses
         #self.n_classes = 23
         # Different for softmax
         self.d = self.X.shape[1] * self.n_classes
@@ -55,7 +55,6 @@ class SoftMaxModel:
         return self.X, self.y
 
     def funObj(self, ww, Xbatch, ybatch, batch_size):
-
         n, d = Xbatch.shape
 
         W = np.reshape(ww, (self.n_classes, d))

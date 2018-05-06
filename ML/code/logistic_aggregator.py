@@ -81,7 +81,7 @@ Weight gradients based on logit
 '''
 def euclidean_binning_hm(full_deltas, distance, get_nnbs):
     full_grad = np.zeros(d)
-
+    deltas = np.reshape(full_deltas, (n, d))
     nnbs, graph = get_nnbs(full_deltas, distance)
     graph -= np.eye(n)
 
