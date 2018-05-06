@@ -1,0 +1,28 @@
+Start training
+Train error: 0.7822000000 	 79 iterations left
+Train error: 0.2439833333 	 78 iterations left
+Train error: 0.2017666667 	 77 iterations left
+Train error: 0.2065833333 	 76 iterations left
+Train error: 0.2090333333 	 75 iterations left
+Train error: 0.2022500000 	 74 iterations left
+Train error: 0.1980666667 	 73 iterations left
+Train error: 0.2119500000 	 72 iterations left
+Train error: 0.1995666667 	 71 iterations left
+Train error: 0.2046166667 	 70 iterations left
+Train error: 0.2114166667 	 69 iterations left
+Train error: 0.1902166667 	 68 iterations left
+Train error: 0.1874166667 	 67 iterations left
+Train error: 0.2012666667 	 66 iterations left
+Train error: 0.1892333333 	 65 iterations left
+Train error: 0.1858666667 	 64 iterations left
+Train error: 0.1883833333 	 63 iterations left
+Train error: 0.1852500000 	 62 iterations left
+Train error: 0.1894833333 	 61 iterations left
+Train error: 0.1913833333 	 60 iterations left
+Train error: 0.1878333333 	 59 iterations left
+Train error: 0.1904333333 	 58 iterations left
+Not improving much...Quiting...
+Done iterations!
+('Train error: %d', 0.19043333333333334)
+('Test error: %d', 0.19089999999999999)
+Traceback (most recent call last):

@@ -1,0 +1,73 @@
+(Pdb) c
+Train error: 0.1570666667 	 78 iterations left
+Train error: 0.1304833333 	 77 iterations left
+Train error: 0.1416666667 	 76 iterations left
+Train error: 0.1330000000 	 75 iterations left
+Train error: 0.1155333333 	 74 iterations left
+Train error: 0.1238000000 	 73 iterations left
+Train error: 0.1112500000 	 72 iterations left
+Train error: 0.1048333333 	 71 iterations left
+Train error: 0.1172333333 	 70 iterations left
+Train error: 0.1079500000 	 69 iterations left
+Train error: 0.1029833333 	 68 iterations left
+Train error: 0.1155833333 	 67 iterations left
+Train error: 0.1036666667 	 66 iterations left
+Train error: 0.1060000000 	 65 iterations left
+Train error: 0.1019000000 	 64 iterations left
+Train error: 0.1169500000 	 63 iterations left
+Not improving much...Quiting...
+Done iterations!
+('Train error: %d', 0.11695)
+('Test error: %d', 0.1181)
+Overall Error: 0.870573434977
+Target Training Accuracy on 1s: 0.981607831504
+Target Training Accuracy on misslabel 7s: 0.945570630487
+Target Attack Rate (1 to 7): 0.00266983091071
+
+--Return--
+> /home/chris/TorML/ML/code/ML_main.py(131)<module>()->None
+-> weights = attack_simulation(models, distance)
+(Pdb) logistic_aggregator.hit_matrix
+array([[   0.,  206.,   71.,  133.,  110.,   40.,   59.,   55.,  107.,
+          52.],
+       [ 206.,    0.,   60.,  103.,   86.,  100.,   99.,   69.,   31.,
+          77.],
+       [  71.,   60.,    0.,   29.,   92.,  207.,   34.,   48.,   52.,
+         141.],
+       [ 133.,  103.,   29.,    0.,  115.,    7.,  167.,   56.,   48.,
+          42.],
+       [ 110.,   86.,   92.,  115.,    0.,   77.,   16.,  157.,   47.,
+           1.],
+       [  40.,  100.,  207.,    7.,   77.,    0.,   54.,   76.,    5.,
+          65.],
+       [  59.,   99.,   34.,  167.,   16.,   54.,    0.,   89.,   83.,
+         135.],
+       [  55.,   69.,   48.,   56.,  157.,   76.,   89.,    0.,  113.,
+           6.],
+       [ 107.,   31.,   52.,   48.,   47.,    5.,   83.,  113.,    0.,
+          28.],
+       [  52.,   77.,  141.,   42.,    1.,   65.,  135.,    6.,   28.,
+           0.]])
+(Pdb) logistic_aggregator.it
+801
+(Pdb) logistic_aggregator.hit_matrix
+array([[   0.,  206.,   71.,  133.,  110.,   40.,   59.,   55.,  107.,
+          52.],
+       [ 206.,    0.,   60.,  103.,   86.,  100.,   99.,   69.,   31.,
+          77.],
+       [  71.,   60.,    0.,   29.,   92.,  207.,   34.,   48.,   52.,
+         141.],
+       [ 133.,  103.,   29.,    0.,  115.,    7.,  167.,   56.,   48.,
+          42.],
+       [ 110.,   86.,   92.,  115.,    0.,   77.,   16.,  157.,   47.,
+           1.],
+       [  40.,  100.,  207.,    7.,   77.,    0.,   54.,   76.,    5.,
+          65.],
+       [  59.,   99.,   34.,  167.,   16.,   54.,    0.,   89.,   83.,
+         135.],
+       [  55.,   69.,   48.,   56.,  157.,   76.,   89.,    0.,  113.,
+           6.],
+       [ 107.,   31.,   52.,   48.,   47.,    5.,   83.,  113.,    0.,
+          28.],
+       [  52.,   77.,  141.,   42.,    1.,   65.,  135.,    6.,   28.,
+           0.]])

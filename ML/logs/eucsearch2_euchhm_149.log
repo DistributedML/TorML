@@ -1,0 +1,39 @@
+chris@liskov:~/TorML/ML$ python code/ML_main.py
+Start training
+Train error: 0.6703833333 	 79 iterations left
+Train error: 0.2127500000 	 78 iterations left
+Train error: 0.1983333333 	 77 iterations left
+Train error: 0.1932166667 	 76 iterations left
+Train error: 0.1961500000 	 75 iterations left
+Train error: 0.2003333333 	 74 iterations left
+Train error: 0.1868833333 	 73 iterations left
+Train error: 0.1804000000 	 72 iterations left
+Train error: 0.1846666667 	 71 iterations left
+Train error: 0.1756166667 	 70 iterations left
+Train error: 0.1716000000 	 69 iterations left
+Train error: 0.1831333333 	 68 iterations left
+Train error: 0.1692000000 	 67 iterations left
+Train error: 0.1791000000 	 66 iterations left
+Train error: 0.1742166667 	 65 iterations left
+Train error: 0.1741333333 	 64 iterations left
+Train error: 0.1676000000 	 63 iterations left
+Train error: 0.1716666667 	 62 iterations left
+Train error: 0.1711000000 	 61 iterations left
+Train error: 0.1790333333 	 60 iterations left
+Not improving much...Quiting...
+Done iterations!
+('Train error: %d', 0.17903333333333332)
+('Test error: %d', 0.1782)
+Overall Error: 0.801701152878
+Target Training Accuracy on 1s: 0.973153366953
+Target Training Accuracy on misslabel 7s: 0.972067039106
+Target Attack Rate (1 to 7): 0.0054879857609
+
+--Return--
+> /home/chris/TorML/ML/code/ML_main.py(137)<module>()->None
+-> pdb.set_trace()
+(Pdb) poisoning_compare.eval(Xtest, ytest, weights, 4, 9)
+Overall Error: 0.806639831604
+Target Training Accuracy on 4s: 0.953782951044
+Target Training Accuracy on misslabel 9s: 0.0
+Target Attack Rate (4 to 9): 0.0

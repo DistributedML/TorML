@@ -4,34 +4,38 @@ import utils
 import matplotlib.pyplot as plt
 import pdb
 
-datatest = utils.load_dataset("kddcup/kddcup_test", npy=True)
+#datatest = utils.load_dataset("mnist_test", npy=True)
+datatest = utils.load_dataset("mnist/mnist_test", npy=True)
 Xtest, ytest = datatest['X'], datatest['y']
 
-datatrain = utils.load_dataset("kddcup/kddcup_train", npy=True)
+#datatrain = utils.load_dataset("mnist_train", npy=True)
+datatrain = utils.load_dataset("mnist/mnist_train", npy=True)
 XBin, yBin = datatrain['X'], datatrain['y']
 
 
 def train_error(ww):
 
     # hardcoded for MNIST
-    W = np.reshape(ww, (23, 41))
+    W = np.reshape(ww, (10, 784))
+    #W = np.reshape(ww, (10, 41))
     yhat = np.argmax(np.dot(XBin, W.T), axis=1)
     error = np.mean(yhat != yBin)
     return error
 
 
 def test_error(ww):
-    W = np.reshape(ww, (23, 41))
+    W = np.reshape(ww, (10, 784))
+    #W = np.reshape(ww, (23, 41))
     yhat = np.argmax(np.dot(Xtest, W.T), axis=1)
     error = np.mean(yhat != ytest)
     return error
 
 
 def kappa(ww, delta):
-    
+
     ww = np.array(ww)
     yhat = np.argmax(np.dot(Xtest, ww), axis=1)
-    
+
     ww2 = np.array(ww + delta)
     yhat2 = np.argmax(np.dot(Xtest, ww2), axis=1)
 
@@ -42,10 +46,10 @@ def kappa(ww, delta):
 
 
 def roni(ww, delta):
-    
+
     ww = np.array(ww)
     yhat = np.argmax(np.dot(Xtest, ww), axis=1)
-    
+
     ww2 = np.array(ww + delta)
     yhat2 = np.argmax(np.dot(Xtest, ww2), axis=1)
 

@@ -2,6 +2,7 @@ from __future__ import division
 import numpy as np
 import pdb
 import falconn
+import sklearn.metrics.pairwise as smp
 
 n = 0
 d = 0
@@ -56,28 +57,97 @@ def lsh_sieve(full_deltas, test_distance):
     for i in range(n):
         for j in range(n):
             # add 1 for divby0 and so that poisoners don't benefit from this
-            new_hm[i][j] = hit_matrix[i][j] / (np.abs(collusions[i] - collusions[j]) + 1)
+            new_hm[i][j] = hit_matrix[i][j] / (np.abs(np.linalg.norm(collusions[i]) - np.linalg.norm(collusions[j])) + 1)
+
 
     # Take the inverse L2 norm
+    # for i in range(n):
+    #     for j in range(n):
+    #         new_hm[i][j] = max(new_hm[i][j] - (it/5), 0)
     wv = 1.0 / (np.linalg.norm(new_hm, axis=1) + 1)
+
+    wv = (np.log(wv / (1 - wv)) + 0.5)
+    wv[(np.isinf(wv) + wv > 1)] = 1
+    wv[(wv < 0)] = 0
 
     # Apply the weights
     full_grad += np.dot(deltas.T, wv)
-
-    global it
-    it += 1
-
     return full_grad, heur_distance, nnbs
 
+def get_nnbs_lsh2(full_deltas, distance):
+    deltas = np.reshape(full_deltas, (n, d))
+    centred_deltas = (deltas - np.mean(deltas, axis=0))
 
-# poisoned[i]: 0 for undefined, 1 for checked off good, 2 for poison
+    params = falconn.get_default_parameters(n, d)
+    fln = falconn.LSHIndex(params)
+    fln.setup(centred_deltas)
+    qob = fln.construct_query_object()
+
+    nnbs = []
+    graph = np.zeros((n,n))
+
+    for i in range(n):
+        neighbors = qob.find_near_neighbors(centred_deltas[i], distance)
+        graph[i][neighbors] += 1
+        nnbs.append(len(neighbors))
+    graph = graph - np.eye(n)
+    return nnbs, graph
+
+def search_distance_lsh2(full_deltas, distance, typical_set, prev, poisoned, last_distance):
+    nnbs, graph = get_nnbs_lsh2(full_deltas, distance)
+    #first run
+    if len(prev) == 0:
+        return search_distance_lsh2(full_deltas, distance/2, typical_set, nnbs, poisoned, distance)
+
+    if distance <= np.finfo(float).eps:
+        return last_distance, poisoned
+    #Keep halving till you reach the minimum value of search space: [1 1 ... 1]
+    if not(typical_set):
+        if np.sum(nnbs) != len(nnbs):
+            return search_distance_lsh2(full_deltas, distance/2, typical_set, nnbs, poisoned, distance)
+        else:
+            return search_distance_lsh2(full_deltas, distance, True, nnbs, poisoned, distance)
+
+    #### Found largest distance s.t nnbs = [1... 1] ####
+
+    #if distances make all nodes overlap, return the last_distance
+    if not(1 in nnbs):
+       return last_distance, poisoned
+
+    new_poisoned = np.array(poisoned)
+    #while there are solo nodes left...
+    if 0 in poisoned:
+        for i in range(n):
+            if prev[i] == 1 and poisoned[i] == 0:
+                if nnbs[i] != 1:
+                    for j in range(n):
+                        if graph[i][j] == 1:
+                            if poisoned[j] == 2:
+                                new_poisoned[i] = 1
+                                break
+                            elif poisoned[j] == 0:
+                                new_poisoned[i] = 2
+                                last_distance = distance
+                                break
+                            else:
+                                new_poisoned[i] = 1
+                                break
+        return search_distance_lsh2(full_deltas, distance*2, typical_set, nnbs, new_poisoned, last_distance)
+    else:
+        return last_distance, poisoned
+
+
+
+
+#poisoned[i]: 0 for undefined, 1 for checked off good, 2 for poison
 def search_distance_euc2(full_deltas, distance, typical_set, prev, poisoned, last_distance):
 
-    nnbs, graph = get_nnbs_euc2(full_deltas, distance)
+    nnbs, graph = get_nnbs_euc_cos(full_deltas, distance)
     #first run
     if len(prev) == 0:
         return search_distance_euc2(full_deltas, distance/2, typical_set, nnbs, poisoned, distance)
-
+    if distance <= np.finfo(float).eps:
+        return last_distance, poisoned
     #Keep halving till you reach the minimum value of search space: [1 1 ... 1]
     if not(typical_set):
         if np.sum(nnbs) != len(nnbs):
@@ -89,7 +159,7 @@ def search_distance_euc2(full_deltas, distance, typical_set, prev, poisoned, las
 
     #if distances make all nodes overlap, return the last_distance
     if not(1 in nnbs):
-       return last_distance
+       return last_distance, poisoned
 
     new_poisoned = np.array(poisoned)
     #while there are solo nodes left...
@@ -108,8 +178,56 @@ def search_distance_euc2(full_deltas, distance, typical_set, prev, poisoned, las
                                 break
         return search_distance_euc2(full_deltas, distance*2, typical_set, nnbs, new_poisoned, last_distance)
     else:
-        return last_distance
+        return last_distance, poisoned
 
+
+def euclidean_binning_hm(full_deltas, distance):
+    global hit_matrix
+    deltas = np.reshape(full_deltas, (n, d))
+    centered_deltas = (deltas - np.mean(deltas, axis=0))
+    full_grad = np.zeros(d)
+
+    nnbs = []
+    graph = (smp.cosine_similarity(centered_deltas) >= (1-distance)).astype(int)
+    nnbs = np.sum(graph, axis=1)
+    graph -= np.eye(n)
+    hit_matrix += graph
+
+    new_hm = np.zeros((n, n))
+    collusions = np.zeros(n);
+    # Find number of collusions per node
+    for i in range(n):
+        collusions[i] = np.sum(hit_matrix[i])
+    # Reweight based on differences in sum
+    for i in range(n):
+        for j in range(n):
+            # add 1 for divby0 and so that poisoners don't benefit from this
+            if (collusions[j] > collusions[i]):
+                new_hm[i][j] = hit_matrix[i][j] / (np.abs(collusions[i] - collusions[j]) + 1)
+
+    global it
+    it += 1
+    # Take the inverse L2 norm
+    wv = 1 / (np.linalg.norm(new_hm, axis=1) + 1)
+
+    wv = (np.log(wv / (1 - wv)) + 0.5)
+    wv[(np.isinf(wv) + wv > 1)] = 1
+    wv[(wv < 0)] = 0
+
+
+    # Apply the weights
+    full_grad += np.dot(deltas.T, wv)
+
+    return full_grad, distance, nnbs
+
+def get_nnbs_euc_cos(full_deltas, distance):
+    deltas = np.reshape(full_deltas, (n, d))
+    centered_deltas = (deltas - np.mean(deltas, axis=0))
+
+    nnbs = []
+    graph = (smp.cosine_similarity(centered_deltas) >= (1-distance)).astype(int)
+    nnbs = np.sum(graph, axis=1)
+    return nnbs, graph
 
 def get_nnbs_euc2(full_deltas, distance):
     deltas = np.reshape(full_deltas, (n, d))
@@ -206,73 +324,8 @@ def get_nnbs_lsh(full_deltas, distance):
         nnbs.append(len(neighbors))
     return nnbs
 
-def euclidean_binning_hm(full_deltas, distance):
-    global hit_matrix
-    deltas = np.reshape(full_deltas, (n, d))
-    centered_deltas = (deltas - np.mean(deltas, axis=0))
 
-    full_grad = np.zeros(d)
-    nnbs = []
-    for i in range(n):
-        nnb = 1
-        # Count nearby gradients within distance
-        for j in range(n):
-            # print(np.linalg.norm(centered_deltas[i] - centered_deltas[j]))
-            if i != j and np.linalg.norm(centered_deltas[i] - centered_deltas[j]) < distance:
-                hit_matrix[i][j] += 1
-                nnb += 1
-        nnbs.append(nnb)
-    #print(nnbs)
-    # TODO:: Make thsi faster/inplace\
-    # Reweight graph based on connectivity heuristic
-    new_hm = np.zeros((n, n))
-    collusions = np.zeros(n);
-    # Find number of collusions per node
-    for i in range(n):
-        collusions[i] = np.sum(hit_matrix[i])
-    # Reweight based on differences in sum
-    for i in range(n):
-        for j in range(n):
-            # add 1 for divby0 and so that poisoners don't benefit from this
-            new_hm[i][j] = hit_matrix[i][j] / (np.abs(collusions[i] - collusions[j]) + 1)
-
-    # Take the inverse L2 norm
-    wv = 1.0 / (np.linalg.norm(new_hm, axis=1) + 1)
-
-    # Normalize to have sum equal to number of clients
-    #wv = wv * n / np.linalg.norm(wv)
-
-    # Apply the weights
-    full_grad += np.dot(deltas.T, wv)
-
-    global it
-    it += 1
-
-    return full_grad, distance, nnbs
-
-
-def euclidean_binning(full_deltas, distance):
-
-    deltas = np.reshape(full_deltas, (n, d))
-    centered_deltas = (deltas - np.mean(deltas, axis=0))
-
-    full_grad = np.zeros(d)
-    nnbs = []
-
-    for i in range(n):
-        nnb = 1
-        # Count nearby gradients within threshhold
-        for j in range(n):
-            # print(np.linalg.norm(centered_deltas[i] - centered_deltas[j]))
-            if i != j and np.linalg.norm(centered_deltas[i] - centered_deltas[j]) < distance:
-                nnb += 1
-        nnbs.append(nnb)
-        full_grad = full_grad + deltas[i] / nnbs[i]
-
-    return full_grad, nnbs
-
-
-def average(full_deltas):
+def average(full_deltas, d, n):
 
     deltas = np.reshape(full_deltas, (n, d))
     return np.mean(deltas, axis=0), 0

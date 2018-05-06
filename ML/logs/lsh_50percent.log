@@ -1,0 +1,72 @@
+chris@liskov:~/TorML/ML$ python code/ML_main.py
+/home/chris/TorML/ML/code/logistic_aggregator.py:47: SyntaxWarning: name 'hit_matrix' is used prior to global declaration
+  global hit_matrix
+/home/chris/TorML/ML/code/logistic_aggregator.py:65: SyntaxWarning: name 'it' is used prior to global declaration
+  global it
+Start training
+Train error: 0.8228666667 	 79 iterations left
+Train error: 0.2744333333 	 78 iterations left
+Train error: 0.2798666667 	 77 iterations left
+Train error: 0.2450166667 	 76 iterations left
+Train error: 0.2505500000 	 75 iterations left
+Train error: 0.2127166667 	 74 iterations left
+Train error: 0.2159833333 	 73 iterations left
+Train error: 0.2147666667 	 72 iterations left
+Train error: 0.2049333333 	 71 iterations left
+Train error: 0.2085500000 	 70 iterations left
+Train error: 0.2267166667 	 69 iterations left
+Train error: 0.2173833333 	 68 iterations left
+Train error: 0.2060666667 	 67 iterations left
+Train error: 0.2224666667 	 66 iterations left
+Train error: 0.2155166667 	 65 iterations left
+Not improving much...Quiting...
+Done iterations!
+('Train error: %d', 0.21551666666666666)
+('Test error: %d', 0.2112)
+Overall Error: 0.759416425701
+Target Training Accuracy on 1s: 0.982497775141
+Target Training Accuracy on misslabel 7s: 0.864804469274
+Target Attack Rate (1 to 7): 0.00103826757639
+
+--Return--
+> /home/chris/TorML/ML/code/ML_main.py(132)<module>()->None
+-> pdb.set_trace()
+(Pdb) poisoning_compare.eval(Xtest, ytest, weights, 4, 9)
+Overall Error: 0.86910521068
+Target Training Accuracy on 4s: 0.0
+Target Training Accuracy on misslabel 9s: 0.95528660279
+Target Attack Rate (4 to 9): 0.993837726806
+
+0.99383772680588844
+(Pdb)
+(Pdb) logistic_aggregator.hit_matrix
+array([[   0.,   36.,   18.,   24.,   25.,   14.,   15.,   19.,   21.,
+          11.,   21.,   18.,   19.,   23.],
+       [  36.,    0.,    8.,   11.,   25.,   19.,   20.,   18.,    7.,
+           9.,   27.,   19.,   23.,   25.],
+       [  18.,    8.,    0.,    5.,   67.,   65.,   26.,   48.,   28.,
+          18.,   14.,    7.,   10.,    7.],
+       [  24.,   11.,    5.,    0.,   44.,    4.,   38.,   28.,    6.,
+          15.,   14.,   11.,   14.,   17.],
+       [  25.,   25.,   67.,   44.,    0.,   88.,   84.,  138.,   94.,
+           0.,    1.,    1.,    0.,    1.],
+       [  14.,   19.,   65.,    4.,   88.,    0.,   37.,   64.,   13.,
+           8.,   11.,    5.,    5.,    8.],
+       [  15.,   20.,   26.,   38.,   84.,   37.,    0.,   93.,   43.,
+           4.,   11.,    8.,    5.,    9.],
+       [  19.,   18.,   48.,   28.,  138.,   64.,   93.,    0.,   91.,
+           1.,    8.,    4.,    3.,    7.],
+       [  21.,    7.,   28.,    6.,   94.,   13.,   43.,   91.,    0.,
+           5.,    9.,    2.,    2.,    6.],
+       [  11.,    9.,   18.,   15.,    0.,    8.,    4.,    1.,    5.,
+           0.,  209.,  221.,  218.,  231.],
+       [  21.,   27.,   14.,   14.,    1.,   11.,   11.,    8.,    9.,
+         209.,    0.,  351.,  326.,  331.],
+       [  18.,   19.,    7.,   11.,    1.,    5.,    8.,    4.,    2.,
+         221.,  351.,    0.,  316.,  338.],
+       [  19.,   23.,   10.,   14.,    0.,    5.,    5.,    3.,    2.,
+         218.,  326.,  316.,    0.,  336.],
+       [  23.,   25.,    7.,   17.,    1.,    8.,    9.,    7.,    6.,
+         231.,  331.,  338.,  336.,    0.]])
+(Pdb) logistic_aggregator.it
+701

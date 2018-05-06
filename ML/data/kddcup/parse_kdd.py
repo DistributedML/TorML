@@ -33,6 +33,8 @@ def main():
     np.save("kddcup_train", traindata)
     np.save("kddcup_test", testdata)
 
+    pdb.set_trace()
+
     # Make a bad dataset, push class 0 to 11 (normal)
     baddata = traindata[np.where(traindata[:, 41] == 0)[0]]
     baddata[:, -1] = 11
