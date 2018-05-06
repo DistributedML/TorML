@@ -52,7 +52,7 @@ def search_distance_euc(full_deltas, distance, typical_set, prev, poisoned, last
     #### Found largest distance s.t nnbs = [1... 1] ####
 
     #if distances make all nodes overlap, return the last_distance
-    if distance >= 0.75:
+    if distance >= 1:
         return last_distance, poisoned
 
     if not(1 in nnbs):
@@ -87,7 +87,8 @@ def euclidean_binning_hm(full_deltas, distance, get_nnbs):
     full_grad = np.zeros(d)
     deltas = np.reshape(full_deltas, (n, d))
     nnbs, graph = get_nnbs(full_deltas, distance)
-    graph -= np.eye(n)
+    
+    graph = graph - np.eye(n)
 
     #Update global hit_matrix
     global hit_matrix
@@ -99,20 +100,34 @@ def euclidean_binning_hm(full_deltas, distance, get_nnbs):
     for i in range(n):
         collusions[i] = np.sum(hit_matrix[i])
     # Reweight based on differences in sum
-    for i in range(n):
-        for j in range(n):
-            # add 1 for divby0 and so that poisoners don't benefit from this
-            if (collusions[j] > collusions[i]):
-                new_hm[i][j] = hit_matrix[i][j] / (np.abs(collusions[i] - collusions[j]) + 1)
+    # for i in range(n):
+    #     for j in range(n):
+    #         # add 1 for divby0 and so that poisoners don't benefit from this
+    #         if (collusions[j] > collusions[i]):
+    #             new_hm[i][j] = hit_matrix[i][j] / (np.abs(collusions[i] - collusions[j]) + 1)
+    #         else:
+    #             new_hm[i][j] = hit_matrix[i][j]
 
     global it
     it += 1
-    # Take the inverse L2 norm
-    wv = 1 / (np.linalg.norm(new_hm, axis=1) + 1)
 
+    # Take the inverse L2 norm
+    wv = 1 / (np.linalg.norm(hit_matrix, axis=1) + 1)
+
+    # Rescale so that max value is wv
+    wv = wv / np.max(wv)
+
+    # print(wv)
+
+    # Logit function (map 0-1 space to inf)
     wv = (np.log(wv / (1 - wv)) + 0.5)
     wv[(np.isinf(wv) + wv > 1)] = 1
     wv[(wv < 0)] = 0
+
+    # Sigmoid function for collusions
+    # Rolling forward, only strike if total collusions / it > 2
+    # tp = collusions / (it * n) 
+    # wv = 1.0 / (1 + np.exp(-10 * wv + 5))
 
     # Apply the weights
     full_grad += np.dot(deltas.T, wv)
