@@ -26,5 +26,8 @@ ML/mnist/*ubyte
 ML/data/mnist/*.npy
 ML/data/amazon/*.npy
 ML/data/kddcup/*.npy
+ML/data/mnist/*ubyte
+ML/data/amazon/*ubyte
+ML/data/kddcup/*ubyte
 ML/data/*.zip
 ML/data/*.arff
