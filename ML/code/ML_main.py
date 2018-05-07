@@ -141,14 +141,19 @@ if __name__ == "__main__":
         models.append(dataPath + str(i))
 
     for attack in argv[1:]:
-        for i in range(int(attack[0])):
-            models.append(dataPath + "_bad_" + attack[1:])
+        attack_delim = attack.split("_")
+        sybil_set_size = attack_delim[0]
+        from_class = attack_delim[1]
+        to_class = attack_delim[2]
+        for i in range(int(sybil_set_size)):
+            models.append(dataPath + "_bad_" + from_class + "_" + to_class)
 
     softmax_test = softmax_model_test.SoftMaxModelTest(dataset, numClasses, numFeatures)
     weights = non_iid(models, numClasses, numParams, softmax_test)
 
     for attack in argv[1:]:
-        from_idx = int(attack[1])
-        to_idx = int(attack[2])
-        score = poisoning_compare.eval(Xtest, ytest, weights, from_idx, to_idx, numClasses, numFeatures)
+        attack_delim = attack.split("_")
+        from_class = attack_delim[1]
+        to_class = attack_delim[2]
+        score = poisoning_compare.eval(Xtest, ytest, weights, int(from_idx), int(to_idx), numClasses, numFeatures)
     # pdb.set_trace()
