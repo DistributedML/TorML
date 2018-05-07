@@ -61,7 +61,7 @@ def basic_conv():
 
 def non_iid(model_names, numClasses, numParams, softmax_test):
 
-    batch_size = 20
+    batch_size = 23
     iterations = 3000
     epsilon = 5
 

@@ -1,3 +1,0 @@
-Evaling for: 
-['mnist0', 'mnist1', 'mnist2', 'mnist3', 'mnist4', 'mnist5', 'mnist6', 'mnist7', 'mnist8', 'mnist9']
-Start training
