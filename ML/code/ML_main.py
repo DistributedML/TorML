@@ -61,7 +61,7 @@ def basic_conv():
 
 def non_iid(model_names, numClasses, numParams, softmax_test):
 
-    batch_size = 10
+    batch_size = 20
     iterations = 3000
     epsilon = 5
 
@@ -81,7 +81,7 @@ def non_iid(model_names, numClasses, numParams, softmax_test):
 
 
 
-    #cs = np.zeros((numClients, numClients))
+    cs = np.zeros((numClients, numClients))
     for i in xrange(iterations):
 
         total_delta = np.zeros((numClients, numParams))
@@ -92,11 +92,11 @@ def non_iid(model_names, numClasses, numParams, softmax_test):
 
         initial_distance = np.random.rand()*10
         scs = logistic_aggregator.get_cos_similarity(total_delta)
-        #cs = cs + scs
-        distance, poisoned = logistic_aggregator.search_distance_euc(total_delta, initial_distance, False, [], np.zeros(numClients), 0, scs)
-        delta, dist, nnbs = logistic_aggregator.euclidean_binning_hm(total_delta, distance, logistic_aggregator.get_nnbs_euc_cos, scs)
-
-        #delta = logistic_aggregator.cos_aggregate(total_delta, cs, i)
+        cs = cs + scs
+        # distance, poisoned = logistic_aggregator.search_distance_euc(total_delta, initial_distance, False, [], np.zeros(numClients), 0, scs)
+        # delta, dist, nnbs = logistic_aggregator.euclidean_binning_hm(total_delta, distance, logistic_aggregator.get_nnbs_euc_cos, scs)
+        #print(distance)
+        delta = logistic_aggregator.cos_aggregate(total_delta, cs, i)
         weights = weights + delta
 
         if i % 100 == 0:
