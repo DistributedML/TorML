@@ -88,15 +88,17 @@ def non_iid(model_names, numClasses, numParams, softmax_test):
             total_delta[k, :] = list_of_models[k].privateFun(1, weights, batch_size)
 
         # Nothing
-        delta = logistic_aggregator.krum(total_delta, 5)
+        # delta = logistic_aggregator.average(total_delta)
 
         # Krum
+        delta = logistic_aggregator.krum(total_delta, 2)
 
         # Our solution
+        # scs = logistic_aggregator.get_cos_similarity(total_delta)
         # distance, poisoned = logistic_aggregator.search_distance_euc(
-        #     total_delta, np.random.rand() * 10, False, [], np.zeros(numClients), 0)
+        #     total_delta, np.random.rand() * 10, False, [], np.zeros(numClients), 0, scs)
         # delta, dist, nnbs = logistic_aggregator.euclidean_binning_hm(
-        #     total_delta, distance, logistic_aggregator.get_nnbs_euc_cos)
+        #     total_delta, distance, logistic_aggregator.get_nnbs_euc_cos, scs)
 
         # poisoned += p
         weights = weights + delta
@@ -149,9 +151,9 @@ if __name__ == "__main__":
         models = []
 
         for i in range(numClasses):
-            models.append(dataPath + str(i))
+            models.append(dataPath + "_train")
 
-        for i in range(exp):
+        for i in range(exp):    
             models.append(dataPath + "_bad_" + attack)
 
         softmax_test = softmax_model_test.SoftMaxModelTest(dataset, numClasses, numFeatures)
@@ -165,5 +167,5 @@ if __name__ == "__main__":
         results[exp, 2] = misslabel_correct
         results[exp, 3] = attacked
 
-    np.savetxt("fig1results_krum.csv", results, delimiter=',')
+    np.savetxt("fig1results_foolsgold.csv", results, delimiter=',')
     pdb.set_trace()
