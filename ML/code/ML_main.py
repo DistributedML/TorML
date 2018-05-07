@@ -59,10 +59,10 @@ def basic_conv():
     print("Test error: %d", softmax_model_test.test_error(weights))
 
 
-def non_iid(model_names, numClasses, numParams, softmax_test):
+def non_iid(model_names, numClasses, numParams, softmax_test, iter=3000):
 
-    batch_size = 23
-    iterations = 3000
+    batch_size = 100
+    iterations = iter
     epsilon = 5
 
     list_of_models = []
@@ -115,7 +115,9 @@ def non_iid(model_names, numClasses, numParams, softmax_test):
 # kdd: 23 classes, 41 features
 if __name__ == "__main__":
     argv = sys.argv[1:]
+
     dataset = argv[0]
+    iter = int(argv[1])
 
     if (dataset == "mnist"):
         numClasses = 10
@@ -140,7 +142,7 @@ if __name__ == "__main__":
     for i in range(numClasses):
         models.append(dataPath + str(i))
 
-    for attack in argv[1:]:
+    for attack in argv[2:]:
         attack_delim = attack.split("_")
         sybil_set_size = attack_delim[0]
         from_class = attack_delim[1]
@@ -149,11 +151,11 @@ if __name__ == "__main__":
             models.append(dataPath + "_bad_" + from_class + "_" + to_class)
 
     softmax_test = softmax_model_test.SoftMaxModelTest(dataset, numClasses, numFeatures)
-    weights = non_iid(models, numClasses, numParams, softmax_test)
+    weights = non_iid(models, numClasses, numParams, softmax_test, iter)
 
-    for attack in argv[1:]:
+    for attack in argv[2:]:
         attack_delim = attack.split("_")
         from_class = attack_delim[1]
         to_class = attack_delim[2]
-        score = poisoning_compare.eval(Xtest, ytest, weights, int(from_idx), int(to_idx), numClasses, numFeatures)
+        score = poisoning_compare.eval(Xtest, ytest, weights, int(from_class), int(to_class), numClasses, numFeatures)
     # pdb.set_trace()
