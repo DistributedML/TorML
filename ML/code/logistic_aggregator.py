@@ -185,7 +185,7 @@ def get_cos_similarity(full_deltas):
 '''
 Aggregates history of gradient directions
 '''
-def cos_aggregate_sum(full_deltas, sum_deltas, i):
+def cos_aggregate_sum_nolog(full_deltas, sum_deltas, i):
     deltas = np.reshape(full_deltas, (n, d))
     full_grad = np.zeros(d)
 
