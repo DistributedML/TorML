@@ -1,5 +1,6 @@
 from __future__ import division
 from numpy.linalg import norm
+from scipy.misc import logsumexp
 import numpy as np
 import utils
 import pdb
@@ -63,20 +64,20 @@ class SoftMaxModel:
         y_binary[np.arange(n), ybatch.astype(int)] = 1
 
         XW = np.dot(Xbatch, W.T)
-        Z = np.sum(np.exp(XW), axis=1)
 
         # Calculate the function value
-        f = - np.sum(XW[y_binary] - np.log(Z))
-
+        f = - np.sum(XW[y_binary] - logsumexp(XW))
+        e_x = np.exp(XW - np.max(XW))
         # Calculate the gradient value
-        res = np.dot((np.exp(XW) / Z[:, None] - y_binary).T, Xbatch)
+        res = np.dot((e_x / e_x.sum() - y_binary).T, Xbatch)
 
         # Some DP methods only work if the gradient is scaled down to have a max norm of 1
         if scale:
             g = (1 / batch_size) * res / max(1, np.linalg.norm(res)) + self.lammy * W
         else:
             g = (1 / batch_size) * res + self.lammy * W
-
+        if True in np.isnan(g):
+            pdb.set_trace()
         return f, g.flatten()
 
 

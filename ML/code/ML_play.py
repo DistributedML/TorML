@@ -61,7 +61,7 @@ def basic_conv():
 
 def non_iid(model_names, numClasses, numParams, softmax_test, iter=3000):
 
-    batch_size = 5
+    batch_size = 1
     iterations = iter
     epsilon = 5
 
@@ -105,7 +105,7 @@ def non_iid(model_names, numClasses, numParams, softmax_test, iter=3000):
             error = softmax_test.train_error(weights)
             print("Train error: %.10f" % error)
             train_progress.append(error)
-    #pdb.set_trace()
+    pdb.set_trace()
     print("Done iterations!")
     print("Train error: %d", softmax_test.train_error(weights))
     print("Test error: %d", softmax_test.test_error(weights))

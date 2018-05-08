@@ -194,6 +194,13 @@ def cos_aggregate_sum(full_deltas, sum_deltas, i):
     full_grad = np.zeros(d)
 
     cs = smp.cosine_similarity(sum_deltas) - np.eye(n)
+    maxcs = np.max(cs, axis=1)
+    for i in range(n):
+        for j in range(n):
+            if i == j:
+                continue
+            if maxcs[i] < maxcs[j]:
+                cs[i][j] = cs[i][j] * maxcs[i]/maxcs[j]
     wv = 1 - (np.max(cs, axis=1))
     wv[wv > 1] = 1
     wv[wv < 0] = 0
@@ -209,6 +216,28 @@ def cos_aggregate_sum(full_deltas, sum_deltas, i):
     full_grad += np.dot(deltas.T, wv)
 
     return full_grad
+
+#
+# def cos_aggregate_sum(full_deltas, sum_deltas, i):
+#     deltas = np.reshape(full_deltas, (n, d))
+#     full_grad = np.zeros(d)
+#
+#     cs = smp.cosine_similarity(sum_deltas) - np.eye(n)
+#     wv = 1 - (np.max(cs, axis=1))
+#     wv[wv > 1] = 1
+#     wv[wv < 0] = 0
+#     # Rescale so that max value is wv
+#     wv = wv / np.max(wv)
+#     wv[(wv == 1)] = .99
+#     wv = (np.log(wv / (1 - wv)) + 0.5)
+#
+#     wv[(np.isinf(wv) + wv > 1)] = 1
+#
+#     wv[(wv < 0)] = 0
+#
+#     full_grad += np.dot(deltas.T, wv)
+#
+#     return full_grad
 
 def cos_aggregate(full_deltas, cs, i):
     if True in np.isnan(full_deltas):
