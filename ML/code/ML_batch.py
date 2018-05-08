@@ -103,7 +103,7 @@ def non_iid(model_names, numClasses, numParams, softmax_test, iter=3000, batch_s
         delta = logistic_aggregator.cos_aggregate_sum(total_delta, ds, i)
         weights = weights + delta
 
-        if i % 100 == 0:
+        if i % 10 == 0:
             error = softmax_test.train_error(weights)
             print("Train error: %.10f" % error)
             train_progress.append(error)
@@ -157,7 +157,7 @@ if __name__ == "__main__":
     softmax_test = softmax_model_test.SoftMaxModelTest(dataset, numClasses, numFeatures)
     training_err = []
     attack_rate = []
-    for batch_size in [1, 5, 10, 20, 50, 100]:
+    for batch_size in [1,2,3,4,5]:
         print("batch_size: " + str(batch_size))
         weights = non_iid(models, numClasses, numParams, softmax_test, iter, batch_size)
         training_err.append(softmax_test.train_error(weights))

@@ -30,7 +30,7 @@ def collect():
             if i == j:
                 row.append(1)
             else:
-                filename = 'autologs/play_1/' + dataset + ' ' + str(iterations) + ' 5_' + str(i) + '_' + str(j) + '.log'
+                filename = 'autologs/f2_new/' + dataset + ' ' + str(iterations) + ' 5_' + str(i) + '_' + str(j) + '.log'
                 with open(filename, 'r') as logfile:
                     data = logfile.read()
                     #print(data)
@@ -41,7 +41,7 @@ def collect():
         grid_data.append(row)
 
     data = np.array(grid_data)
-    np.savetxt("play1.csv", data, delimiter=',')
+    np.savetxt("f2n.csv", data, delimiter=',')
     return data
 
 if __name__ == "__main__":
