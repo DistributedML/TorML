@@ -59,9 +59,9 @@ def basic_conv():
     print("Test error: %d", softmax_model_test.test_error(weights))
 
 
-def non_iid(model_names, numClasses, numParams, softmax_test, iter=3000):
+def non_iid(model_names, numClasses, numParams, softmax_test, iter=3000, batch_size=10):
 
-    batch_size = 10
+    #batch_size = 5
     iterations = iter
     epsilon = 5
 
@@ -79,10 +79,9 @@ def non_iid(model_names, numClasses, numParams, softmax_test, iter=3000):
     train_progress = []
 
 
-    #sum yourself
-    #sum pairwise
-    ds = np.zeros((numClients, numParams))
-    #cs = np.zeros((numClients, numClients))
+
+
+    cs = np.zeros((numClients, numClients))
     for i in xrange(iterations):
 
         total_delta = np.zeros((numClients, numParams))
@@ -92,20 +91,19 @@ def non_iid(model_names, numClasses, numParams, softmax_test, iter=3000):
 
 
         initial_distance = np.random.rand()*10
-        ds = ds + total_delta
-        #scs = logistic_aggregator.get_cos_similarity(total_delta)
-        #cs = cs + scs
+        scs = logistic_aggregator.get_cos_similarity(total_delta)
+        cs = cs + scs
         # distance, poisoned = logistic_aggregator.search_distance_euc(total_delta, initial_distance, False, [], np.zeros(numClients), 0, scs)
         # delta, dist, nnbs = logistic_aggregator.euclidean_binning_hm(total_delta, distance, logistic_aggregator.get_nnbs_euc_cos, scs)
         #print(distance)
-        delta = logistic_aggregator.cos_aggregate_sum(total_delta, ds, i)
+        delta = logistic_aggregator.cos_aggregate(total_delta, cs, i)
         weights = weights + delta
 
         if i % 100 == 0:
             error = softmax_test.train_error(weights)
             print("Train error: %.10f" % error)
             train_progress.append(error)
-    pdb.set_trace()
+
     print("Done iterations!")
     print("Train error: %d", softmax_test.train_error(weights))
     print("Test error: %d", softmax_test.test_error(weights))
@@ -153,11 +151,20 @@ if __name__ == "__main__":
             models.append(dataPath + "_bad_" + from_class + "_" + to_class)
 
     softmax_test = softmax_model_test.SoftMaxModelTest(dataset, numClasses, numFeatures)
-    weights = non_iid(models, numClasses, numParams, softmax_test, iter)
-
-    for attack in argv[2:]:
-        attack_delim = attack.split("_")
-        from_class = attack_delim[1]
-        to_class = attack_delim[2]
-        score = poisoning_compare.eval(Xtest, ytest, weights, int(from_class), int(to_class), numClasses, numFeatures)
-    # pdb.set_trace()
+    training_err = []
+    attack_rate = []
+    for batch_size in [1, 5, 10, 20, 50, 100]:
+        print("batch_size: " + str(batch_size))
+        weights = non_iid(models, numClasses, numParams, softmax_test, iter, batch_size)
+        training_err.append(softmax_test.train_error(weights))
+        for attack in argv[2:]:
+            attack_delim = attack.split("_")
+            from_class = attack_delim[1]
+            to_class = attack_delim[2]
+            overall, correct1, misslabel_correct, attacked1 = poisoning_compare.eval(Xtest, ytest, weights, int(from_class), int(to_class), numClasses, numFeatures)
+            attack_rate.append(attacked1)
+        print("train err: ")
+        print(training_err)
+        print("attack rate: ")
+        print(attack_rate)
+    pdb.set_trace()

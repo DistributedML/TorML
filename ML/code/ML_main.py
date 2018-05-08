@@ -32,7 +32,7 @@ def basic_conv():
 
     dataset = "mnist_train"
 
-    batch_size = 10
+    batch_size = 50
     iterations = 4000
     epsilon = 5
 
@@ -61,7 +61,7 @@ def basic_conv():
 
 def non_iid(model_names, numClasses, numParams, softmax_test, iter=3000):
 
-    batch_size = 50000
+    batch_size = 10
     iterations = iter
     epsilon = 5
 
