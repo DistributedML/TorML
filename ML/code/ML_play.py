@@ -32,7 +32,7 @@ def basic_conv():
 
     dataset = "mnist_train"
 
-    batch_size = 10
+    batch_size = 1
     iterations = 4000
     epsilon = 5
 
@@ -61,7 +61,7 @@ def basic_conv():
 
 def non_iid(model_names, numClasses, numParams, softmax_test, iter=3000):
 
-    batch_size = 50000
+    batch_size = 5
     iterations = iter
     epsilon = 5
 
@@ -79,9 +79,10 @@ def non_iid(model_names, numClasses, numParams, softmax_test, iter=3000):
     train_progress = []
 
 
-
-
-    cs = np.zeros((numClients, numClients))
+    #sum yourself
+    #sum pairwise
+    ds = np.zeros((numClients, numParams))
+    #cs = np.zeros((numClients, numClients))
     for i in xrange(iterations):
 
         total_delta = np.zeros((numClients, numParams))
@@ -91,19 +92,20 @@ def non_iid(model_names, numClasses, numParams, softmax_test, iter=3000):
 
 
         initial_distance = np.random.rand()*10
-        scs = logistic_aggregator.get_cos_similarity(total_delta)
-        cs = cs + scs
+        ds = ds + total_delta
+        #scs = logistic_aggregator.get_cos_similarity(total_delta)
+        #cs = cs + scs
         # distance, poisoned = logistic_aggregator.search_distance_euc(total_delta, initial_distance, False, [], np.zeros(numClients), 0, scs)
         # delta, dist, nnbs = logistic_aggregator.euclidean_binning_hm(total_delta, distance, logistic_aggregator.get_nnbs_euc_cos, scs)
         #print(distance)
-        delta = logistic_aggregator.cos_aggregate(total_delta, cs, i)
+        delta = logistic_aggregator.cos_aggregate_sum(total_delta, ds, i)
         weights = weights + delta
 
         if i % 100 == 0:
             error = softmax_test.train_error(weights)
             print("Train error: %.10f" % error)
             train_progress.append(error)
-
+    #pdb.set_trace()
     print("Done iterations!")
     print("Train error: %d", softmax_test.train_error(weights))
     print("Test error: %d", softmax_test.test_error(weights))

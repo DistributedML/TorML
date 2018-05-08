@@ -15,7 +15,7 @@ do
         NEWARG="$ARG"' 5_'"$i"'_'"$j"
         FILENAME="autologs/"$NEWARG'.log'
         echo $FILENAME
-        python code/ML_main.py $NEWARG > "$FILENAME"
+        python -u code/ML_play.py $NEWARG > "$FILENAME"
     fi
   done
 done

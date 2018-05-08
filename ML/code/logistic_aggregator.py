@@ -177,10 +177,42 @@ Return
 def get_cos_similarity(full_deltas):
     deltas = np.reshape(full_deltas, (n, d))
     centered_deltas = (deltas - np.mean(deltas, axis=0))
+    if True in np.isnan(centered_deltas):
+        pdb.set_trace()
     return smp.cosine_similarity(centered_deltas)
 
 
+def pairwise_sum(full_deltas):
+    pairwise = np.zeros((n,n,d))
+    for i in range(n):
+        for j in range(n):
+            pairwise[i][j] = full_deltas[i] + full_deltas[j]
+    return pairwise
+
+def cos_aggregate_sum(full_deltas, sum_deltas, i):
+    deltas = np.reshape(full_deltas, (n, d))
+    full_grad = np.zeros(d)
+
+    cs = smp.cosine_similarity(sum_deltas) - np.eye(n)
+    wv = 1 - (np.max(cs, axis=1))
+    wv[wv > 1] = 1
+    wv[wv < 0] = 0
+    # Rescale so that max value is wv
+    wv = wv / np.max(wv)
+    wv[(wv == 1)] = .99
+    wv = (np.log(wv / (1 - wv)) + 0.5)
+
+    wv[(np.isinf(wv) + wv > 1)] = 1
+
+    wv[(wv < 0)] = 0
+
+    full_grad += np.dot(deltas.T, wv)
+
+    return full_grad
+
 def cos_aggregate(full_deltas, cs, i):
+    if True in np.isnan(full_deltas):
+        pdb.set_trace()
     deltas = np.reshape(full_deltas, (n, d))
     full_grad = np.zeros(d)
 
@@ -200,6 +232,25 @@ def cos_aggregate(full_deltas, cs, i):
     full_grad += np.dot(deltas.T, wv)
     return full_grad
 
+def cos_aggregate_nomem(full_deltas, scs):
+    deltas = np.reshape(full_deltas, (n, d))
+    full_grad = np.zeros(d)
+
+    scs = scs - np.eye(n)
+    wv = 1 - (np.max(scs, axis=1))
+    wv[wv > 1] = 1
+    wv[wv < 0] = 0
+    # Rescale so that max value is wv
+    wv = wv / np.max(wv)
+
+    wv = (np.log(wv / (1 - wv)) + 0.5)
+
+    wv[(np.isinf(wv) + wv > 1)] = 1
+
+    wv[(wv < 0)] = 0
+
+    full_grad += np.dot(deltas.T, wv)
+    return full_grad
 
 def average(full_deltas):
 
