@@ -64,12 +64,18 @@ class SoftMaxModel:
         y_binary[np.arange(n), ybatch.astype(int)] = 1
 
         XW = np.dot(Xbatch, W.T)
-
+        #XW = XW - np.max(XW)
+        Z = np.sum(np.exp(XW), axis=1)
         # Calculate the function value
         f = - np.sum(XW[y_binary] - logsumexp(XW))
-        e_x = np.exp(XW - np.max(XW))
+        #
         # Calculate the gradient value
-        res = np.dot((e_x / e_x.sum() - y_binary).T, Xbatch)
+
+        mval = np.max(XW)
+        XW = XW - mval
+        Z = np.sum(np.exp(XW), axis=1)
+        res = np.dot((np.exp(XW) / Z[:, None] - y_binary).T, Xbatch)
+
 
         # Some DP methods only work if the gradient is scaled down to have a max norm of 1
         if scale:
@@ -79,6 +85,34 @@ class SoftMaxModel:
         if True in np.isnan(g):
             pdb.set_trace()
         return f, g.flatten()
+
+
+    # def funObj(self, ww, Xbatch, ybatch, batch_size):
+    #
+    #     n, d = Xbatch.shape
+    #
+    #     W = np.reshape(ww, (self.n_classes, d))
+    #
+    #     y_binary = np.zeros((n, self.n_classes)).astype(bool)
+    #     y_binary[np.arange(n), ybatch.astype(int)] = 1
+    #
+    #     XW = np.dot(Xbatch, W.T)
+    #     Z = np.sum(np.exp(XW), axis=1)
+    #
+    #     # Calculate the function value
+    #     f = - np.sum(XW[y_binary] - np.log(Z))
+    #
+    #     # Calculate the gradient value
+    #     res = np.dot((np.exp(XW) / Z[:, None] - y_binary).T, Xbatch)
+    #
+    #     # Some DP methods only work if the gradient is scaled down to have a max norm of 1
+    #     if scale:
+    #         g = (1 / batch_size) * res / max(1, np.linalg.norm(res)) + self.lammy * W
+    #     else:
+    #         g = (1 / batch_size) * res + self.lammy * W
+    #
+    #     return f, g.flatten()
+
 
 
     # Reports the direct change to w, based on the given one.
