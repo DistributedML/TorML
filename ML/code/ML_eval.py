@@ -153,7 +153,7 @@ if __name__ == "__main__":
         for i in range(numClasses):
             models.append(dataPath + "_train")
 
-        for i in range(exp):    
+        for i in range(exp):
             models.append(dataPath + "_bad_" + attack)
 
         softmax_test = softmax_model_test.SoftMaxModelTest(dataset, numClasses, numFeatures)
