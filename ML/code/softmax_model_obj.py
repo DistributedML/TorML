@@ -65,7 +65,7 @@ class SoftMaxModel:
 
         XW = np.dot(Xbatch, W.T)
         #XW = XW - np.max(XW)
-        Z = np.sum(np.exp(XW), axis=1)
+        #Z = np.sum(np.exp(XW), axis=1)
         # Calculate the function value
         f = - np.sum(XW[y_binary] - logsumexp(XW))
         #
@@ -74,8 +74,9 @@ class SoftMaxModel:
         mval = np.max(XW)
         XW = XW - mval
         Z = np.sum(np.exp(XW), axis=1)
-        res = np.dot((np.exp(XW) / Z[:, None] - y_binary).T, Xbatch)
-
+        v = np.exp(XW) / Z[:, None]
+        v[np.isnan(v)] = 0
+        res = np.dot((v - y_binary).T, Xbatch)
 
         # Some DP methods only work if the gradient is scaled down to have a max norm of 1
         if scale:
