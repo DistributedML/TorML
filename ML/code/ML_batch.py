@@ -101,6 +101,7 @@ def non_iid(model_names, numClasses, numParams, softmax_test, iter=3000, batch_s
         # delta, dist, nnbs = logistic_aggregator.euclidean_binning_hm(total_delta, distance, logistic_aggregator.get_nnbs_euc_cos, scs)
         #print(distance)
         delta = logistic_aggregator.cos_aggregate_sum(total_delta, ds, i)
+        # delta = logistic_aggregator.cos_aggregate_sum_nomem(total_delta)
         weights = weights + delta
 
         if i % 10 == 0:
