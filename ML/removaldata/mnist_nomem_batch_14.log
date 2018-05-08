@@ -1,0 +1,574 @@
+batch_size: 1
+Start training across 15 clients.
+Train error: 0.6464333333
+Train error: 0.4280833333
+Train error: 0.3651833333
+Train error: 0.3645833333
+Train error: 0.3561500000
+Train error: 0.2368333333
+Train error: 0.2877666667
+Train error: 0.2254500000
+Train error: 0.3215833333
+Train error: 0.3629666667
+Train error: 0.2442500000
+Train error: 0.2023833333
+Train error: 0.2479833333
+Train error: 0.2291666667
+Train error: 0.2156333333
+Train error: 0.2472166667
+Train error: 0.1752833333
+Train error: 0.2215000000
+Train error: 0.3085166667
+Train error: 0.2211666667
+Train error: 0.2185500000
+Train error: 0.1723833333
+Train error: 0.2069666667
+Train error: 0.1874833333
+Train error: 0.2206500000
+Train error: 0.2332833333
+Train error: 0.2466666667
+Train error: 0.2217166667
+Train error: 0.2090666667
+Train error: 0.2221666667
+Train error: 0.1813166667
+Train error: 0.1795666667
+Train error: 0.2343500000
+Train error: 0.2815666667
+Train error: 0.1614500000
+Train error: 0.1519833333
+Train error: 0.2580333333
+Train error: 0.2121666667
+Train error: 0.2892166667
+Train error: 0.1583166667
+Train error: 0.1842166667
+Train error: 0.2813333333
+Train error: 0.1862666667
+Train error: 0.2481000000
+Train error: 0.2152166667
+Train error: 0.3411666667
+Train error: 0.3262166667
+Train error: 0.1752333333
+Train error: 0.1921333333
+Train error: 0.1895000000
+Train error: 0.2625333333
+Train error: 0.2111500000
+Train error: 0.1534833333
+Train error: 0.2846333333
+Train error: 0.1717666667
+Train error: 0.1962000000
+Train error: 0.1988833333
+Train error: 0.1610166667
+Train error: 0.2845166667
+Train error: 0.2061666667
+Train error: 0.1640000000
+Train error: 0.1803166667
+Train error: 0.1957333333
+Train error: 0.1737666667
+Train error: 0.1586833333
+Train error: 0.2082000000
+Train error: 0.1857333333
+Train error: 0.1737000000
+Train error: 0.1828000000
+Train error: 0.1871333333
+Train error: 0.1560833333
+Train error: 0.1676666667
+Train error: 0.1596833333
+Train error: 0.2079000000
+Train error: 0.2030666667
+Train error: 0.1755500000
+Train error: 0.1830166667
+Train error: 0.1603333333
+Train error: 0.2455500000
+Train error: 0.2049000000
+Train error: 0.2054666667
+Train error: 0.1939333333
+Train error: 0.2164000000
+Train error: 0.2303166667
+Train error: 0.1594333333
+Train error: 0.3102666667
+Train error: 0.1754833333
+Train error: 0.2148500000
+Train error: 0.1357666667
+Train error: 0.3123166667
+Train error: 0.1614666667
+Train error: 0.2126666667
+Train error: 0.2029333333
+Train error: 0.2561666667
+Train error: 0.2219333333
+Train error: 0.1736166667
+Train error: 0.1810333333
+Train error: 0.2216333333
+Train error: 0.1882166667
+Train error: 0.1817166667
+Done iterations!
+('Train error: %d', 0.1899)
+('Test error: %d', 0.1871)
+Overall Error: 0.8307484321604266
+Target Training Accuracy on 1s: 0.6469890240284782
+Target Training Accuracy on misslabel 7s: 0.887948922585794
+Target Attack Rate (1 to 7): 0.3289824977751409
+
+train err: 
+[0.1899]
+attack rate: 
+[0.3289824977751409]
+batch_size: 2
+Start training across 15 clients.
+Train error: 0.6475166667
+Train error: 0.2531333333
+Train error: 0.2105166667
+Train error: 0.1906000000
+Train error: 0.2432500000
+Train error: 0.1714833333
+Train error: 0.1822333333
+Train error: 0.1425333333
+Train error: 0.1631666667
+Train error: 0.1605666667
+Train error: 0.1505000000
+Train error: 0.1844500000
+Train error: 0.1536500000
+Train error: 0.1987333333
+Train error: 0.1753166667
+Train error: 0.1506166667
+Train error: 0.1442333333
+Train error: 0.1394500000
+Train error: 0.1503333333
+Train error: 0.1862333333
+Train error: 0.1348166667
+Train error: 0.1519333333
+Train error: 0.1646000000
+Train error: 0.1279166667
+Train error: 0.1529666667
+Train error: 0.1489500000
+Train error: 0.1713500000
+Train error: 0.1208000000
+Train error: 0.1524500000
+Train error: 0.1187000000
+Train error: 0.1348000000
+Train error: 0.1614666667
+Train error: 0.1321500000
+Train error: 0.1398833333
+Train error: 0.1152500000
+Train error: 0.1361333333
+Train error: 0.1160166667
+Train error: 0.1707166667
+Train error: 0.1237833333
+Train error: 0.1545166667
+Train error: 0.1384666667
+Train error: 0.1307666667
+Train error: 0.1256333333
+Train error: 0.1214000000
+Train error: 0.1431833333
+Train error: 0.1340500000
+Train error: 0.1376500000
+Train error: 0.1143000000
+Train error: 0.1808166667
+Train error: 0.1200000000
+Train error: 0.1306333333
+Train error: 0.1240000000
+Train error: 0.1463333333
+Train error: 0.1220833333
+Train error: 0.1576000000
+Train error: 0.1098166667
+Train error: 0.1560833333
+Train error: 0.1319666667
+Train error: 0.1332000000
+Train error: 0.1521000000
+Train error: 0.1309500000
+Train error: 0.1328166667
+Train error: 0.1713333333
+Train error: 0.1416166667
+Train error: 0.1208833333
+Train error: 0.1391666667
+Train error: 0.1229166667
+Train error: 0.1690000000
+Train error: 0.1344333333
+Train error: 0.1244666667
+Train error: 0.1343500000
+Train error: 0.1250833333
+Train error: 0.1148666667
+Train error: 0.1110500000
+Train error: 0.1214833333
+Train error: 0.1170500000
+Train error: 0.1401166667
+Train error: 0.1903500000
+Train error: 0.1210166667
+Train error: 0.1169833333
+Train error: 0.1240166667
+Train error: 0.1284166667
+Train error: 0.1242666667
+Train error: 0.1440333333
+Train error: 0.1936666667
+Train error: 0.1280166667
+Train error: 0.1911833333
+Train error: 0.1598000000
+Train error: 0.1286000000
+Train error: 0.1171333333
+Train error: 0.1157166667
+Train error: 0.1340500000
+Train error: 0.1122333333
+Train error: 0.1459833333
+Train error: 0.1192833333
+Train error: 0.1533666667
+Train error: 0.1573333333
+Train error: 0.1593333333
+Train error: 0.1200833333
+Train error: 0.1526000000
+Done iterations!
+('Train error: %d', 0.12328333333333333)
+('Test error: %d', 0.122)
+Overall Error: 0.8692778549701453
+Target Training Accuracy on 1s: 0.9354790863245328
+Target Training Accuracy on misslabel 7s: 0.8330407023144454
+Target Attack Rate (1 to 7): 0.008751112429546128
+
+train err: 
+[0.1899, 0.12328333333333333]
+attack rate: 
+[0.3289824977751409, 0.008751112429546128]
+batch_size: 3
+Start training across 15 clients.
+Train error: 0.6757166667
+Train error: 0.2794833333
+Train error: 0.1927833333
+Train error: 0.1612833333
+Train error: 0.1742666667
+Train error: 0.1642333333
+Train error: 0.1466166667
+Train error: 0.1349500000
+Train error: 0.1478000000
+Train error: 0.1402333333
+Train error: 0.1342833333
+Train error: 0.1476333333
+Train error: 0.1573000000
+Train error: 0.1245833333
+Train error: 0.1469000000
+Train error: 0.1372666667
+Train error: 0.1645500000
+Train error: 0.1303333333
+Train error: 0.1181000000
+Train error: 0.1194333333
+Train error: 0.1329500000
+Train error: 0.1312666667
+Train error: 0.1121666667
+Train error: 0.1220333333
+Train error: 0.1166333333
+Train error: 0.1239833333
+Train error: 0.1208333333
+Train error: 0.1239666667
+Train error: 0.1316833333
+Train error: 0.1162166667
+Train error: 0.1445333333
+Train error: 0.1245000000
+Train error: 0.1155000000
+Train error: 0.1366333333
+Train error: 0.1240833333
+Train error: 0.1119333333
+Train error: 0.1082166667
+Train error: 0.1054166667
+Train error: 0.1276833333
+Train error: 0.1162833333
+Train error: 0.1005000000
+Train error: 0.1049666667
+Train error: 0.1437000000
+Train error: 0.1095333333
+Train error: 0.1051000000
+Train error: 0.1136833333
+Train error: 0.1042166667
+Train error: 0.1092333333
+Train error: 0.1210333333
+Train error: 0.1041166667
+Train error: 0.1108666667
+Train error: 0.1174833333
+Train error: 0.1065333333
+Train error: 0.1055666667
+Train error: 0.1080833333
+Train error: 0.1152833333
+Train error: 0.1240500000
+Train error: 0.1217666667
+Train error: 0.1049500000
+Train error: 0.1071333333
+Train error: 0.1128166667
+Train error: 0.1271666667
+Train error: 0.0989500000
+Train error: 0.1241833333
+Train error: 0.1245666667
+Train error: 0.1173166667
+Train error: 0.1217500000
+Train error: 0.1185000000
+Train error: 0.1132000000
+Train error: 0.1034500000
+Train error: 0.1221833333
+Train error: 0.1123333333
+Train error: 0.1028666667
+Train error: 0.1220000000
+Train error: 0.1067166667
+Train error: 0.1026000000
+Train error: 0.1232500000
+Train error: 0.1077833333
+Train error: 0.1215833333
+Train error: 0.1226500000
+Train error: 0.1266333333
+Train error: 0.1122500000
+Train error: 0.1133500000
+Train error: 0.1142833333
+Train error: 0.1232333333
+Train error: 0.1047333333
+Train error: 0.1258666667
+Train error: 0.1065666667
+Train error: 0.1164500000
+Train error: 0.1068500000
+Train error: 0.1272833333
+Train error: 0.1071833333
+Train error: 0.1065000000
+Train error: 0.1076333333
+Train error: 0.1084666667
+Train error: 0.1117666667
+Train error: 0.1063833333
+Train error: 0.1023666667
+Train error: 0.1097833333
+Train error: 0.1236666667
+Done iterations!
+('Train error: %d', 0.11663333333333334)
+('Test error: %d', 0.1132)
+Overall Error: 0.8757745315257802
+Target Training Accuracy on 1s: 0.9433402551171759
+Target Training Accuracy on misslabel 7s: 0.9166799680766161
+Target Attack Rate (1 to 7): 0.006526253337288638
+
+train err: 
+[0.1899, 0.12328333333333333, 0.11663333333333334]
+attack rate: 
+[0.3289824977751409, 0.008751112429546128, 0.006526253337288638]
+batch_size: 4
+Start training across 15 clients.
+Train error: 0.5075666667
+Train error: 0.2882166667
+Train error: 0.1976000000
+Train error: 0.1660500000
+Train error: 0.1416333333
+Train error: 0.1669666667
+Train error: 0.1351333333
+Train error: 0.1550666667
+Train error: 0.1236000000
+Train error: 0.1298333333
+Train error: 0.1386666667
+Train error: 0.1220833333
+Train error: 0.1132166667
+Train error: 0.1274166667
+Train error: 0.1383666667
+Train error: 0.1151833333
+Train error: 0.1351833333
+Train error: 0.1476833333
+Train error: 0.1129833333
+Train error: 0.1377166667
+Train error: 0.1244166667
+Train error: 0.1114500000
+Train error: 0.1143333333
+Train error: 0.1076666667
+Train error: 0.1359666667
+Train error: 0.1123666667
+Train error: 0.1174500000
+Train error: 0.1055000000
+Train error: 0.1211833333
+Train error: 0.1131666667
+Train error: 0.1102166667
+Train error: 0.1124333333
+Train error: 0.1016833333
+Train error: 0.1026833333
+Train error: 0.1075166667
+Train error: 0.0985000000
+Train error: 0.0995666667
+Train error: 0.1143833333
+Train error: 0.1023500000
+Train error: 0.1086333333
+Train error: 0.1196500000
+Train error: 0.1056666667
+Train error: 0.1061833333
+Train error: 0.1017166667
+Train error: 0.1095500000
+Train error: 0.1201000000
+Train error: 0.1028000000
+Train error: 0.1023500000
+Train error: 0.1071166667
+Train error: 0.1080666667
+Train error: 0.0999000000
+Train error: 0.1054666667
+Train error: 0.1075500000
+Train error: 0.0974333333
+Train error: 0.1004166667
+Train error: 0.1063833333
+Train error: 0.1056333333
+Train error: 0.1024833333
+Train error: 0.1052666667
+Train error: 0.1122166667
+Train error: 0.0973333333
+Train error: 0.1126000000
+Train error: 0.1024333333
+Train error: 0.1068833333
+Train error: 0.1024166667
+Train error: 0.1018000000
+Train error: 0.1019500000
+Train error: 0.1082666667
+Train error: 0.1252333333
+Train error: 0.1009500000
+Train error: 0.0964500000
+Train error: 0.0950833333
+Train error: 0.1109000000
+Train error: 0.1085666667
+Train error: 0.1077500000
+Train error: 0.1009333333
+Train error: 0.1158833333
+Train error: 0.1012833333
+Train error: 0.1027666667
+Train error: 0.1065666667
+Train error: 0.1018666667
+Train error: 0.1132833333
+Train error: 0.1002333333
+Train error: 0.1010500000
+Train error: 0.1019666667
+Train error: 0.0942333333
+Train error: 0.1066333333
+Train error: 0.0960166667
+Train error: 0.0971833333
+Train error: 0.1112666667
+Train error: 0.1041833333
+Train error: 0.0945833333
+Train error: 0.1053000000
+Train error: 0.1413333333
+Train error: 0.1070000000
+Train error: 0.0983666667
+Train error: 0.0976500000
+Train error: 0.1045333333
+Train error: 0.1160166667
+Train error: 0.1080000000
+Done iterations!
+('Train error: %d', 0.09738333333333334)
+('Test error: %d', 0.0921)
+Overall Error: 0.8940628637951106
+Target Training Accuracy on 1s: 0.9701868881637497
+Target Training Accuracy on misslabel 7s: 0.9018355945730248
+Target Attack Rate (1 to 7): 0.0017798872738059924
+
+train err: 
+[0.1899, 0.12328333333333333, 0.11663333333333334, 0.09738333333333334]
+attack rate: 
+[0.3289824977751409, 0.008751112429546128, 0.006526253337288638, 0.0017798872738059924]
+batch_size: 5
+Start training across 15 clients.
+Train error: 0.5407000000
+Train error: 0.2181333333
+Train error: 0.1639000000
+Train error: 0.1499000000
+Train error: 0.1354333333
+Train error: 0.1336333333
+Train error: 0.1245666667
+Train error: 0.1603666667
+Train error: 0.1285333333
+Train error: 0.1242000000
+Train error: 0.1291833333
+Train error: 0.1303000000
+Train error: 0.1157333333
+Train error: 0.1184333333
+Train error: 0.1288833333
+Train error: 0.1228666667
+Train error: 0.1139000000
+Train error: 0.1077000000
+Train error: 0.1076666667
+Train error: 0.1115166667
+Train error: 0.1071500000
+Train error: 0.1126500000
+Train error: 0.1062666667
+Train error: 0.1171000000
+Train error: 0.1122166667
+Train error: 0.1184333333
+Train error: 0.1080833333
+Train error: 0.1031166667
+Train error: 0.1086000000
+Train error: 0.1139000000
+Train error: 0.1105166667
+Train error: 0.1082333333
+Train error: 0.1192000000
+Train error: 0.1072666667
+Train error: 0.1087833333
+Train error: 0.1120000000
+Train error: 0.1006333333
+Train error: 0.1020833333
+Train error: 0.1020666667
+Train error: 0.1028833333
+Train error: 0.1058000000
+Train error: 0.0974666667
+Train error: 0.1062166667
+Train error: 0.1033666667
+Train error: 0.1003833333
+Train error: 0.0978166667
+Train error: 0.0988166667
+Train error: 0.0989500000
+Train error: 0.1052666667
+Train error: 0.1070833333
+Train error: 0.0965000000
+Train error: 0.1017833333
+Train error: 0.0990833333
+Train error: 0.0980833333
+Train error: 0.0984000000
+Train error: 0.1037166667
+Train error: 0.0991000000
+Train error: 0.0964833333
+Train error: 0.1059333333
+Train error: 0.0979666667
+Train error: 0.1039333333
+Train error: 0.0976666667
+Train error: 0.0988500000
+Train error: 0.1024000000
+Train error: 0.0967666667
+Train error: 0.0968000000
+Train error: 0.1053833333
+Train error: 0.1063500000
+Train error: 0.0963666667
+Train error: 0.0986166667
+Train error: 0.1007666667
+Train error: 0.1085000000
+Train error: 0.0948666667
+Train error: 0.1113166667
+Train error: 0.0946000000
+Train error: 0.0940166667
+Train error: 0.1166333333
+Train error: 0.1109500000
+Train error: 0.1003500000
+Train error: 0.0950000000
+Train error: 0.0946833333
+Train error: 0.1089166667
+Train error: 0.1058333333
+Train error: 0.1230333333
+Train error: 0.0961833333
+Train error: 0.1037833333
+Train error: 0.0954166667
+Train error: 0.1094000000
+Train error: 0.0933333333
+Train error: 0.0938833333
+Train error: 0.0900833333
+Train error: 0.1044333333
+Train error: 0.0996500000
+Train error: 0.1017833333
+Train error: 0.1069666667
+Train error: 0.1041000000
+Train error: 0.1001000000
+Train error: 0.0955666667
+Train error: 0.0987666667
+Train error: 0.0999666667
+Done iterations!
+('Train error: %d', 0.10986666666666667)
+('Test error: %d', 0.1099)
+Overall Error: 0.8805062150287281
+Target Training Accuracy on 1s: 0.9661821417976861
+Target Training Accuracy on misslabel 7s: 0.9393455706304868
+Target Attack Rate (1 to 7): 0.0040047463660634825
+
+train err: 
+[0.1899, 0.12328333333333333, 0.11663333333333334, 0.09738333333333334, 0.10986666666666667]
+attack rate: 
+[0.3289824977751409, 0.008751112429546128, 0.006526253337288638, 0.0017798872738059924, 0.0040047463660634825]
+--Return--
+> /home/cfung/workspace/DistML/NewEvalSybil/TorML/ML/code/ML_batch.py(175)<module>()->None
+-> pdb.set_trace()
+(Pdb) (Pdb) 
