@@ -64,10 +64,11 @@ def basic_conv():
     print("Train error: %d", softmax_model_test.train_error(weights))
     print("Test error: %d", softmax_model_test.test_error(weights))
 
-@profile
+
 def non_iid(model_names, numClasses, numParams, softmax_test, iter=3000):
     # Measuring time and memory
     time_start = time.clock()
+    print("Start time: " + str(time_start))
 
     batch_size = 50
     iterations = iter
@@ -139,7 +140,10 @@ def non_iid(model_names, numClasses, numParams, softmax_test, iter=3000):
     print("Train error: %d", softmax_test.train_error(weights))
     print("Test error: %d", softmax_test.test_error(weights))
 
-    time_elapsed = (time.clock() - time_start)
+
+    end_time = time.clock()
+    print("End time: " + str(end_time))
+    time_elapsed = (end_time - time_start)
     print("Memory used: ")
     print(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
     print("Time used: ")
