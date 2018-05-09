@@ -1,0 +1,12 @@
+A-1MNIST
+A-1KDD
+A-1Amazon
+A-5 MNIST
+A-5 KDD
+A-5 Amazon
+A-2x5 MNIST
+A-2x5 Amazon
+A-5x5 MNIST
+A-5x5 Amazon
+A-AllOnOne  
+A-99
