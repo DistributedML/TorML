@@ -62,11 +62,13 @@ def basic_conv():
     print("Train error: %d", softmax_model_test.train_error(weights))
     print("Test error: %d", softmax_model_test.test_error(weights))
 
+times = []
+mem_usage = []
 
 def non_iid(model_names, numClasses, numParams, softmax_test, iter=3000):
 
     # Measuring time and memory
-    time_start = time.clock()
+    time_start = time.time()
     print("Start time: " + str(time_start))
 
     batch_size = 50
@@ -110,14 +112,17 @@ def non_iid(model_names, numClasses, numParams, softmax_test, iter=3000):
     print("Test error: %d", softmax_test.test_error(weights))
 
 
-    end_time = time.clock()
+    end_time = time.time()
     print("End time: " + str(end_time))
     time_elapsed = (end_time - time_start)
     print("Memory used: ")
-    print(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
+    mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    print(mem)
     print("Time used: ")
     print(time_elapsed)
-
+    print("-----------")
+    times.append(time_elapsed)
+    mem_usage.append(mem)
     return weights
 
 
@@ -163,7 +168,14 @@ if __name__ == "__main__":
 
     softmax_test = softmax_model_test.SoftMaxModelTest(dataset, numClasses, numFeatures)
 
-    weights = non_iid(models, numClasses, numParams, softmax_test, iter)
+    softmax_test = softmax_model_test.SoftMaxModelTest(dataset, numClasses, numFeatures)
+    for i in range(3):
+        weights = non_iid(models, numClasses, numParams, softmax_test, iter)
+    print("Times and memory used")
+    print(times)
+    print(mem_usage)
+    print(np.average(times))
+    print(np.average(mem_usage))
 
 
     for attack in argv[2:]:
