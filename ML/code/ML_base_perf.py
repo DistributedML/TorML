@@ -15,6 +15,9 @@ import utils
 
 import pdb
 import sys
+
+import time
+import resource
 np.set_printoptions(suppress=True)
 
 # Just a simple sandbox for testing out python code, without using Go.
@@ -59,8 +62,12 @@ def basic_conv():
     print("Train error: %d", softmax_model_test.train_error(weights))
     print("Test error: %d", softmax_model_test.test_error(weights))
 
-
+@profile
 def non_iid(model_names, numClasses, numParams, softmax_test, iter=3000):
+
+    # Measuring time and memory
+    time_start = time.clock()
+
 
     batch_size = 50
     iterations = iter
@@ -93,14 +100,22 @@ def non_iid(model_names, numClasses, numParams, softmax_test, iter=3000):
 
         ####
 
-        if i % 10 == 0:
-            error = softmax_test.train_error(weights)
-            print("Train error: %.10f" % error)
-            train_progress.append(error)
+        # if i % 50 == 0:
+        #     error = softmax_test.train_error(weights)
+        #     print("Train error: %.10f" % error)
+        #     train_progress.append(error)
     #pdb.set_trace()
     print("Done iterations!")
     print("Train error: %d", softmax_test.train_error(weights))
     print("Test error: %d", softmax_test.test_error(weights))
+
+
+    time_elapsed = (time.clock() - time_start)
+    print("Memory used: ")
+    print(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
+    print("Time used: ")
+    print(time_elapsed)
+
     return weights
 
 
@@ -145,7 +160,9 @@ if __name__ == "__main__":
             models.append(dataPath + "_bad_" + from_class + "_" + to_class)
 
     softmax_test = softmax_model_test.SoftMaxModelTest(dataset, numClasses, numFeatures)
+
     weights = non_iid(models, numClasses, numParams, softmax_test, iter)
+
 
     for attack in argv[2:]:
         attack_delim = attack.split("_")
