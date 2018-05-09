@@ -19,7 +19,7 @@ import sys
 import time
 import resource
 np.set_printoptions(suppress=True)
-numpy.warnings.filterwarnings('ignore')
+np.warnings.filterwarnings('ignore')
 # Just a simple sandbox for testing out python code, without using Go.
 
 
