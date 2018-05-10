@@ -1,17 +1,25 @@
 import numpy as np
+import pdb 
 
-data = np.load("mnist1.npy")
 probs = [20, 40, 60, 80]
+total_samples = 5000
 
-for p in probs:
+for i in range(5):
 
-    data = np.load("mnist1.npy")
+    for p in probs:
 
-    num_to_flip = p * data.shape[0] / 100
-    flip_idx = np.random.permutation(data.shape[0])[0:num_to_flip]
+        data1 = np.load("mnist1.npy")
+        data4 = np.load("mnist4.npy")
 
-    # Only label that proportion as 7s
-    data[flip_idx, -1] = 7
+        num_1 = p * 50  # percentage
+        num_4 = (100 - p) * 50
 
-    print("Flipped " + str(len(flip_idx)) + " samples.")
-    np.save("mnist_bad_1_7_" + str(p), data)
+        Xones = data1[np.random.permutation(data1.shape[0])[0:num_1]]
+        Xfors = data4[np.random.permutation(data4.shape[0])[0:num_4]]
+
+        Xones[:, -1] = 7
+        Xfors[:, -1] = 9
+
+        data = np.vstack((Xones, Xfors))
+
+        np.save("mnist_bad_mixed_" + str(p) + "_" + str(i), data)
