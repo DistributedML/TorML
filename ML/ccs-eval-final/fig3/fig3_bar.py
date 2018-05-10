@@ -30,7 +30,7 @@ plt.xlabel("Proportion of Mixed Data", fontsize=22)
 plt.ylabel("Attack Rate", fontsize=22)
 
 axes = plt.gca()
-axes.set_ylim([0, 0.01])
+axes.set_ylim([0, 0.005])
 
 ax.spines['right'].set_visible(False)
 ax.spines['top'].set_visible(False)
@@ -38,4 +38,4 @@ ax.spines['top'].set_visible(False)
 plt.setp(ax.get_xticklabels(), fontsize=18)
 plt.setp(ax.get_yticklabels(), fontsize=18)
 
-fig.savefig("fig3_mixing.pdf", bbox_inches='tight')
+fig.savefig("fig3_mixing_old.pdf", bbox_inches='tight')
