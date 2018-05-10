@@ -1,7 +1,7 @@
 import numpy as np
 import pdb 
 
-probs = [20, 40, 60, 80]
+probs = [20, 40, 50, 60, 80]
 total_samples = 5000
 
 for i in range(5):
