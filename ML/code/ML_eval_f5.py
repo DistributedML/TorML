@@ -7,6 +7,7 @@ import logistic_aggregator
 import softmax_model
 import softmax_model_test
 import softmax_model_obj
+import softmax_validator
 import poisoning_compare
 
 import numpy as np
@@ -32,7 +33,7 @@ def basic_conv():
 
     dataset = "mnist_train"
 
-    batch_size = 1
+    batch_size = 10
     iterations = 4000
     epsilon = 5
 
@@ -42,9 +43,6 @@ def basic_conv():
     print("Start training")
 
     weights = np.random.rand(numFeatures) / 1000.0
-
-    train_progress = np.zeros(iterations)
-    test_progress = np.zeros(iterations)
 
     for i in xrange(iterations):
         deltas = softmax_model.privateFun(1, weights, batch_size)
@@ -78,49 +76,41 @@ def non_iid(model_names, numClasses, numParams, softmax_test, iter=3000):
     weights = np.random.rand(numParams) / 100.0
     train_progress = []
 
+    cs = np.zeros((numClients, numClients))
 
-    #sum yourself
-    #sum pairwise
-    ds = np.zeros((numClients, numParams))
-    #cs = np.zeros((numClients, numClients))
+    all_roni = np.zeros((iter, numClients))
+
     for i in xrange(iterations):
 
         total_delta = np.zeros((numClients, numParams))
 
         for k in range(len(list_of_models)):
-            total_delta[k, :] = list_of_models[k].privateFun(1, weights, batch_size)
+            sub_delta = list_of_models[k].privateFun(1, weights, batch_size)
+            all_roni[i, k] = str(softmax_validator.roni(weights, sub_delta))
+            total_delta[k, :] = sub_delta
 
+        # scs = logistic_aggregator.get_cos_similarity(total_delta)
+        # cs = cs + scs
+        # delta = logistic_aggregator.cos_aggregate(total_delta, cs, i)
 
-        initial_distance = np.random.rand()*10
-        ds = ds + total_delta
-        #scs = logistic_aggregator.get_cos_similarity(total_delta)
-        #cs = cs + scs
-        # distance, poisoned = logistic_aggregator.search_distance_euc(total_delta, initial_distance, False, [], np.zeros(numClients), 0, scs)
-        # delta, dist, nnbs = logistic_aggregator.euclidean_binning_hm(total_delta, distance, logistic_aggregator.get_nnbs_euc_cos, scs)
-        #print(distance)
-        delta = logistic_aggregator.cos_aggregate_sum(total_delta, ds, i)
-        #delta = logistic_aggregator.cos_aggregate_sum_nomem(total_delta)
+        delta = logistic_aggregator.average(total_delta)
         weights = weights + delta
 
         if i % 100 == 0:
             error = softmax_test.train_error(weights)
             print("Train error: %.10f" % error)
             train_progress.append(error)
-    #pdb.set_trace()
+
     print("Done iterations!")
     print("Train error: %d", softmax_test.train_error(weights))
     print("Test error: %d", softmax_test.test_error(weights))
-    return weights
+
+    return weights, all_roni
 
 
-# amazon: 50 classes, 10000 features
-# mnist: 10 classes, 784 features
-# kdd: 23 classes, 41 features
 if __name__ == "__main__":
     argv = sys.argv[1:]
-
     dataset = argv[0]
-    iter = int(argv[1])
 
     if (dataset == "mnist"):
         numClasses = 10
@@ -140,25 +130,27 @@ if __name__ == "__main__":
     full_model = softmax_model_obj.SoftMaxModel(dataPath + "_train", 1, numClasses)
     Xtest, ytest = full_model.get_data()
 
-    models = []
+    # Over poisoners from 0 to 9
+    results = np.zeros((10, 4))
 
-    for i in range(numClasses):
-        models.append(dataPath + str(i))
+    for sanity in range(5):
 
-    for attack in argv[2:]:
-        attack_delim = attack.split("_")
-        sybil_set_size = attack_delim[0]
-        from_class = attack_delim[1]
-        to_class = attack_delim[2]
-        for i in range(int(sybil_set_size)):
-            models.append(dataPath + "_bad_" + from_class + "_" + to_class)
+        print("Start attack with 5")
+        attack = "1_7"
+        models = []
 
-    softmax_test = softmax_model_test.SoftMaxModelTest(dataset, numClasses, numFeatures)
-    weights = non_iid(models, numClasses, numParams, softmax_test, iter)
+        for i in range(numClasses):
+            models.append(dataPath + str(i))
 
-    for attack in argv[2:]:
-        attack_delim = attack.split("_")
-        from_class = attack_delim[1]
-        to_class = attack_delim[2]
-        score = poisoning_compare.eval(Xtest, ytest, weights, int(from_class), int(to_class), numClasses, numFeatures)
-    # pdb.set_trace()
+        for i in range(5):
+            models.append(dataPath + "_bad_" + attack)
+
+        softmax_test = softmax_model_test.SoftMaxModelTest(dataset, numClasses, numFeatures)
+        weights, roni = non_iid(models, numClasses, numParams, softmax_test, 3000)
+
+        overall, correct, misslabel_correct, attacked = poisoning_compare.eval(
+            Xtest, ytest, weights, 1, 7, numClasses, numFeatures)
+
+        np.save("all_roni_scores_" + str(sanity), roni)
+
+    pdb.set_trace()
