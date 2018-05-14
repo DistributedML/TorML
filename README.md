@@ -1,6 +1,9 @@
 # TorMentor
 A collaborative machine learning framework that operates through Tor.
 
+# Talks and Presentations 
+May 11th - UBC Cybersecurity Summit: [Talk](presentations/CyberSecuritySummit-05-11-2018.pdf) [Poster](presentations/TorMentor-Poster-Print.pdf)
+
 # Instructions
 Everything is stored in two directories: DistSys (in Golang, all the distributed systems logic) and ML (in Python, all the ML logic)  
 We use [go-python](https://github.com/sbinet/go-python) to link the two.
