@@ -33,10 +33,10 @@ def main():
     p2 = ax.bar(np.arange(6) + width, toplot[coreidx + 1], width, hatch='\\')
     p3 = ax.bar(np.arange(6) + 2 * width, 1 - toplot[coreidx + 2], width, hatch='.')
     ax.set_xticks(np.arange(6) + width)
-    ax.set_xticklabels(ticklabels, rotation=20, fontsize=16)
+    ax.set_xticklabels(ticklabels, rotation=20, fontsize=20)
 
     yticks = np.array([0, 20, 40, 60, 80, 100])
-    ax.set_yticklabels(yticks, fontsize=16)
+    ax.set_yticklabels(yticks, fontsize=20)
 
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
@@ -65,11 +65,11 @@ def main():
 
     plt.ylim(0, 1.25)
 
-    plt.ylabel('Error/Rate', fontsize=16)
+    plt.ylabel('%', fontsize=20)
 
     ax.legend((p1[0], p2[0], p3[0]),
               ('Training Error', 'Attack Rate', 'Target Class Error'),
-              loc='upper left', ncol=3, fontsize=15)
+              loc='upper left', ncol=3, fontsize=20)
 
     fig.tight_layout(pad=0.1)
     fig.savefig("fig_modules.pdf")

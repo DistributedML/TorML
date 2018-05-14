@@ -1,0 +1,38 @@
+MNIST 5x5
+
+Target Attack Rate (0 to 1): 0.000168833361472
+Target Attack Rate (2 to 3): 0.0
+Target Attack Rate (4 to 5): 0.000342348510784
+Target Attack Rate (6 to 7): 0.000168976005407
+Target Attack Rate (8 to 9): 0.0
+
+Target Attack Rate (0 to 1): 0.000168833361472
+Target Attack Rate (2 to 3): 0.0
+Target Attack Rate (4 to 5): 0.000513522766176
+Target Attack Rate (6 to 7): 0.000168976005407
+Target Attack Rate (8 to 9): 0.0
+
+Target Attack Rate (0 to 1): 0.000168833361472
+Target Attack Rate (2 to 3): 0.0
+Target Attack Rate (4 to 5): 0.000342348510784
+Target Attack Rate (6 to 7): 0.0
+Target Attack Rate (8 to 9): 0.0
+
+Amazon 5x5
+
+-- All zeros
+
+MNIST 99
+
+Overall Error: 0.896710353374141   
+Target Training Accuracy on 1s: 0.960100860278849
+Target Training Accuracy on misslabel 7s: 0.9019952114924182
+Target Attack Rate (1 to 7): 0.0014832393948383269
+
+Target Training Accuracy on 1s: 0.9731533669534262
+Target Training Accuracy on misslabel 7s: 0.8906624102154829
+Target Attack Rate (1 to 7): 0.0016315633343221595
+
+Target Training Accuracy on 1s: 0.9473450014832394
+Target Training Accuracy on misslabel 7s: 0.8344772545889865
+Target Attack Rate (1 to 7): 0.004153070305547315 

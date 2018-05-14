@@ -6,19 +6,21 @@ import pdb
 fig, ax = plt.subplots(figsize=(10, 5))
 
 prop = [20, 40, 60, 80, 100]
-datasets = ['mnist', 'kddcup', 'amazon']
+datasets = ['mnist']
 plotobj = np.zeros((5, 3))
+doubleobj = np.zeros((5, 4))
 
-for d in range(3):
+df = pd.read_csv("fig3_1749.csv", header=None)
+doubleobj = df.values
 
-    dataset = datasets[d]
+pdb.set_trace()
 
-    for i in range(5):
+for i in range(5):
 
-        df = pd.read_csv("fig3results_" + dataset + "_" + str(i) + ".csv", header=None)
-        data = df.values
+    df = pd.read_csv("fig3results_" + "mnist" + "_" + str(i) + ".csv", header=None)
+    data = df.values
 
-        plotobj[:, d] += data[:, 3] / 5
+    plotobj[:, 1] += data[:, 3] / 5
 
 plt.plot(prop, plotobj[:, 0], color="black", label="MNIST", lw=5)
 plt.plot(prop, plotobj[:, 1], color="red", label="KDDCup", lw=5)

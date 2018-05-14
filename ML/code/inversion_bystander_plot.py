@@ -6,7 +6,7 @@ import pdb
 
 if __name__ == "__main__":
 
-    top_path = "inversion_results/badVictimModel_"
+    top_path = "eurosys-eval/inversion_results/badVictimModel_"
     csv = ".csv"
 
     width = 0.25

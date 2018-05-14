@@ -30,6 +30,9 @@ df2 = pd.read_csv("canon_accuracy.csv", header=None)
 data2 = df2.values
 toplot2 = np.mean(data2, axis=1)
 
+toplot[toplot < 0.01] = 0.001
+toplot2[toplot2 < 0.01] = 0.001
+
 plt.subplot(2, 1, 1)
 plt.bar(np.arange(4), toplot[is_mnist], width)
 plt.ylabel("Attack Rate", fontsize=18)
@@ -52,7 +55,7 @@ plt.ylim(0, 1)
 
 plt.subplot(2, 1, 2)
 
-plt.ylim(0, 1)
+plt.ylim(0, 1.05)
 plt.tick_params(
     labelsize=14,
     axis='y',          # changes apply to the x-axis

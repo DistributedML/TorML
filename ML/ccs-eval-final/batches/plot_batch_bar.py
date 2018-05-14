@@ -19,7 +19,7 @@ data3 = df3.values
 
 N = 6
 width = 0.25
-fig, ax = plt.subplots(figsize=(8, 5))
+fig, ax = plt.subplots(figsize=(8, 4))
 
 ticklabels = ['1', '5', '10', '20', '50', '100']
 
@@ -29,13 +29,13 @@ p3 = ax.bar(np.arange(6) + 2 * width, np.mean(data3[1:3], axis=0), width, hatch=
 ax.set_xticks(np.arange(6) + width)
 ax.set_xticklabels(ticklabels, fontsize=16)
 
-ax.set_yticklabels(np.arange(0, 10, 2))
+ax.set_yticklabels(np.arange(0, 7, 1))
 plt.setp(ax.get_yticklabels(), fontsize=16)
 
 ax.spines['right'].set_visible(False)
 ax.spines['top'].set_visible(False)
 
-plt.ylim(0, 0.1)
+plt.ylim(0, 0.06)
 
 totals = []
 
@@ -59,7 +59,7 @@ for i in ax.patches:
 # ##############################
 
 plt.xlabel('Batch Size', fontsize=16)
-plt.ylabel('Error/Rate (%)', fontsize=16)
+plt.ylabel('Attack Rate (%)', fontsize=16)
 
 ax.legend((p1[0], p2[0], p3[0]),
           ('MNIST', 'KDDCup', 'Amazon'),

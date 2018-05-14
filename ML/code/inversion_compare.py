@@ -9,10 +9,10 @@ import pdb
 def compare(victim_csv):
 
     # Inverted attacked dataset
-    data = utils.load_dataset("creditbad")
+    data = utils.load_dataset("credit/creditbad")
     X, y = data['X'], data['y']
 
-    testdata = utils.load_dataset("credittest")
+    testdata = utils.load_dataset("credit/credittest")
     Xvalid, yvalid = testdata['X'], testdata['y']
 
     # Train the optimal classifier
