@@ -24,7 +24,7 @@ type MessageData struct {
 	Type 		  string
 	SourceNode    string
 	ModelId       string
-	Key 		  string
+    Key 		  string
 	NumFeatures   int
 	MinClients    int
 }
@@ -85,12 +85,16 @@ var (
 	// Kick a client out after 2% of RONI
 	THRESHOLD			float64 = -0.1
 
+    // synchrony model
+    synchronous         bool = true
+
 	// Test Module for python
 	pyTestModule  *python.PyObject
 	pyTestFunc    *python.PyObject
 	pyTrainFunc   *python.PyObject
 	pyRoniFunc    *python.PyObject
 	pyPlotFunc    *python.PyObject
+    pyAggInitFunc *python.PyObject
 
 	pyAggModule   *python.PyObject
 	pyKrumFunc    *python.PyObject
@@ -201,9 +205,10 @@ func pyInit() {
 	// pyTestModule = python.PyImport_ImportModule("logistic_model_test")
 	
     pyAggModule = python.PyImport_ImportModule("logistic_aggregator")
-    pyTestModule = python.PyImport_ImportModule("softmax_model_test")
+    pyTestModule = python.PyImport_ImportModule("logistic_model_test")
 
-	pyLshFunc = pyAggModule.GetAttrString("lsh_sieve")
+	pyAggInitFunc = pyAggModule.GetAttrString("init")
+    pyLshFunc = pyAggModule.GetAttrString("lsh_sieve")
 	pyKrumFunc = pyAggModule.GetAttrString("krum")
     pyAvgFunc = pyAggModule.GetAttrString("average")
     
@@ -230,7 +235,7 @@ func main() {
 	samplingRate = 5000
 
 	// What loss until you claim convergence?
-	convergThreshold = 0.05
+	convergThreshold = 0.005
 
 	// Make ports 6000 to 6010 available
 	for i := 6000; i <= 6010; i++ {
@@ -507,6 +512,9 @@ func startModel(modelId string, numFeatures int, minClients int) bool {
 	mutex.Unlock()
 	fmt.Printf("Added a new model: %s\n", modelId)
 
+    pyAggInitFunc.CallFunction(python.PyInt_FromLong(minClients), 
+        python.PyInt_FromLong(numFeatures))
+
 	return true
 }
 
@@ -656,8 +664,6 @@ func gradientUpdate(puzzleKey string, modelId string, deltas []float64) {
 
 	} else {
 
-        synchronous := true
-
         // Collect the update 
         if synchronous {
 
@@ -683,9 +689,7 @@ func gradientUpdate(puzzleKey string, modelId string, deltas []float64) {
                     g++
                 }
 
-                pyTotalUpdate := pyAvgFunc.CallFunction(pyAllDeltas, 
-                    python.PyInt_FromLong(len(deltas)), 
-                    python.PyInt_FromLong(theModel.MinClients))
+                pyTotalUpdate := pyAvgFunc.CallFunction(pyAllDeltas)
 
                 total_update := pythonToGoFloatArray(pyTotalUpdate)
 

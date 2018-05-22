@@ -76,7 +76,7 @@ func pyInit(datasetName string) {
 	python.PyList_Insert(sysPath, 0, python.PyString_FromString("./"))
 	python.PyList_Insert(sysPath, 0, python.PyString_FromString("../ML/code"))
 
-	pyLogModule = python.PyImport_ImportModule("softmax_model")
+	pyLogModule = python.PyImport_ImportModule("logistic_model")
 	pyLogInitFunc = pyLogModule.GetAttrString("init")
 	pyLogPrivFunc = pyLogModule.GetAttrString("privateFun")
 	pyNumFeatures = pyLogInitFunc.CallFunction(python.PyString_FromString(datasetName), python.PyFloat_FromDouble(epsilon))

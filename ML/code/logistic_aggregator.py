@@ -166,6 +166,7 @@ def cos_aggregate(full_deltas, cs, i):
     full_grad += np.dot(deltas.T, wv)
     return full_grad
 
+
 def cos_aggregate_nomem(full_deltas, scs):
     deltas = np.reshape(full_deltas, (n, d))
     full_grad = np.zeros(d)
@@ -185,6 +186,7 @@ def cos_aggregate_nomem(full_deltas, scs):
 
     full_grad += np.dot(deltas.T, wv)
     return full_grad
+
 
 def average(full_deltas):
 

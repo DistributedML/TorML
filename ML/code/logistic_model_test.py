@@ -3,10 +3,10 @@ import numpy as np
 import utils
 import pdb
 
-data = utils.load_dataset("credittest")
+data = utils.load_dataset("credit/credittest")
 Xtest, ytest = data['X'], data['y']
 
-data = utils.load_dataset("credittrain")
+data = utils.load_dataset("credit/credittrain")
 XBin, yBin = data['X'], data['y']
 
 
