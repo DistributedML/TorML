@@ -24,7 +24,6 @@ var (
 type MessageData struct {
   Type          string
   SourceNode    string
-  ModelId       string
   Key           string
   NumFeatures   int
   MinClients    int
@@ -44,22 +43,21 @@ func parseArgs() {
   flag.Parse()
   inputargs := flag.Args()
   if len(inputargs) < 2 {
-    fmt.Println("USAGE: go run torcurator.go curatorName modelName minClients")
+    fmt.Println("USAGE: go run torcurator.go curatorName minClients")
     os.Exit(1)
   }
 
   name = inputargs[0]
-  modelName = inputargs[1]
 
     var err error
-    minClients, err = strconv.Atoi(inputargs[2])
+    minClients, err = strconv.Atoi(inputargs[1])
 
     if err != nil {
         fmt.Println("Must pass an int for numClients.")
         os.Exit(1)
     }
 
-  if len(inputargs) > 3 {
+  if len(inputargs) > 2 {
     fmt.Println("Running locally.")
     isLocal = true
   }
@@ -91,7 +89,6 @@ func sendCurateMessage(logger *govec.GoLog, torDialer proxy.Dialer) int {
   var msg MessageData
   msg.Type = "curator"
   msg.SourceNode = name
-  msg.ModelId = modelName
   msg.Key = ""
 
   // MNIST has 7840, credit has 25

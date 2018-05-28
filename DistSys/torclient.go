@@ -29,7 +29,6 @@ var TOR_PROXY 		string = "127.0.0.1:9150"
 type MessageData struct {
 	Type   		  string
 	SourceNode    string
-	ModelId       string
 	Key           string
 	NumFeatures   int
 	MinClients    int
@@ -37,7 +36,6 @@ type MessageData struct {
 
 // Schema for data used in gradient updates
 type GradientData struct {
-	ModelId 	  string
 	Key			  string
 	Deltas 		  []float64
 }
@@ -45,7 +43,6 @@ type GradientData struct {
 var (
 	
 	name 			string
-	modelName  		string
 	datasetName 	string
 	numFeatures     int
 	minClients      int
@@ -97,7 +94,7 @@ func main() {
 	// Initialize the python side
 	pyInit(datasetName)
 
-	fmt.Printf("Joining model %s \n", modelName)
+	fmt.Printf("Joining model \n")
   	joined := sendJoinMessage(logger, torDialer)
 
   	if joined == 0 {
@@ -131,7 +128,6 @@ func heartbeat(logger *govec.GoLog, torDialer proxy.Dialer) {
 		var msg MessageData
 		msg.Type = "beat"
 		msg.SourceNode = name
-		msg.ModelId = modelName
 		msg.Key = puzzleKey
 		msg.NumFeatures = numFeatures
 		msg.MinClients = minClients
@@ -167,17 +163,16 @@ func parseArgs() {
 
 	flag.Parse()
 	inputargs := flag.Args()
-	if len(inputargs) < 4 {
-		fmt.Println("USAGE: go run torclient.go nodeName studyName datasetName epsilon isLocal")
+	if len(inputargs) < 3 {
+		fmt.Println("USAGE: go run torclient.go nodeName datasetName epsilon isLocal")
 		os.Exit(1)
 	}
 	
 	name = inputargs[0]
-	modelName = inputargs[1]
-	datasetName = inputargs[2]
+	datasetName = inputargs[1]
 	
 	var err error
-	epsilon, err = strconv.ParseFloat(inputargs[3], 64)
+	epsilon, err = strconv.ParseFloat(inputargs[2], 64)
 
 	if err != nil {
 		fmt.Println("Must pass a float for epsilon.")
@@ -187,10 +182,9 @@ func parseArgs() {
 	torHost = ONION_HOST
 
 	fmt.Printf("Name: %s\n", name)
-	fmt.Printf("Study: %s\n", modelName)
 	fmt.Printf("Dataset: %s\n", datasetName)
 
-	if len(inputargs) > 4 {
+	if len(inputargs) > 3 {
 		fmt.Println("Running locally.")
 		isLocal = true
 		torHost = LOCAL_HOST
@@ -233,7 +227,6 @@ func sendGradMessage(logger *govec.GoLog,
 		var msg GradientData
 		if !bootstrapping {
 			msg.Key = puzzleKey
-			msg.ModelId = modelName
 			msg.Deltas, err = oneGradientStep(globalW)
 
 			if err != nil {
@@ -244,7 +237,6 @@ func sendGradMessage(logger *govec.GoLog,
 
 		} else {
 			msg.Key = puzzleKey
-			msg.ModelId = modelName
 			msg.Deltas = make([]float64, numFeatures)
 			bootstrapping = false
 		}
@@ -312,7 +304,6 @@ func sendJoinMessage(logger *govec.GoLog, torDialer proxy.Dialer) int {
 	var msg MessageData
     msg.Type = "join"
     msg.SourceNode = name
-    msg.ModelId = modelName
     msg.Key = ""
     msg.NumFeatures = numFeatures
     msg.MinClients = minClients

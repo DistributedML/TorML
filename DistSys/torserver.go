@@ -23,7 +23,6 @@ import (
 type MessageData struct {
 	Type 		  string
 	SourceNode    string
-	ModelId       string
     Key 		  string
 	NumFeatures   int
 	MinClients    int
@@ -31,7 +30,6 @@ type MessageData struct {
 
 // Schema for data used in gradient updates
 type GradientData struct {
-	ModelId 	  string
 	Key			  string
 	Deltas 		  []float64
 }
@@ -60,7 +58,8 @@ type Model struct {
 }
 
 type Validator struct {
-	IsValidating		bool
+	Exists              bool
+    IsValidating		bool
 	NumResponses		int
 	ClientResponses 	map[string][]float64
 	ValidationModel		[]float64
@@ -76,17 +75,19 @@ var (
 	mutex 				*sync.Mutex
 
 	myPorts				map[int]bool
-	myModels 			map[string]Model
-	myValidators	 	map[string]Validator
+	theModel 			Model
+	theValidator	 	Validator
 
     // Inverse rate of multicast. Set to > 1 if you want to disable
-	MULTICAST_RATE		float64 = 1.1
+	MULTICAST_RATE		float64 = 0.9
 	
 	// Kick a client out after 2% of RONI
-	THRESHOLD			float64 = -0.1
+	THRESHOLD			float64 = -0.05
+
+    DEFAULT_JOIN_POW    int = 4
 
     // synchrony model
-    synchronous         bool = true
+    synchronous         bool = false
 
 	// Test Module for python
 	pyTestModule  *python.PyObject
@@ -112,22 +113,19 @@ func handler(w http.ResponseWriter, r *http.Request) {
     
     fmt.Fprintf(w, "Welcome %s!\n\n", r.URL.Path[1:])
 
-    _, exists := myModels[req]
-    
-    if exists {
+    if req == "model" {
 
     	mutex.Lock()
-    	model := myModels[req]
-    	trainError, testError := testModel(model, "global")
+    	trainError, testError := testModel(theModel, "global")
     	fmt.Fprintf(w, "Train Loss: %f\n", trainError)	
     	fmt.Fprintf(w, "Test Loss: %f\n", testError)
-        fmt.Fprintf(w, "Num Iterations: %d\n", model.NumIterations)
-    	fmt.Fprintf(w, "Num Clients: %d\n", len(model.Clients))
+        fmt.Fprintf(w, "Num Iterations: %d\n", theModel.NumIterations)
+    	fmt.Fprintf(w, "Num Clients: %d\n", len(theModel.Clients))
 
-    	for node, clientState := range model.Clients {
+    	for node, clientState := range theModel.Clients {
     	
     		fmt.Fprintf(w, "\n");	
-    		trainError, testError = testModel(model, node)
+    		trainError, testError = testModel(theModel, node)
     		fmt.Fprintf(w, "%.5s iterations: %d\n", node, clientState.NumIterations)
     		fmt.Fprintf(w, "%.5s validations: %d\n", node, clientState.NumValidations)
     		fmt.Fprintf(w, "%.5s L2 outlier score: %f\n", node, clientState.OutlierScore)	
@@ -135,7 +133,9 @@ func handler(w http.ResponseWriter, r *http.Request) {
     		fmt.Fprintf(w, "%.5s test Loss: %f\n", node, testError)	
     	
     	}
+
     	mutex.Unlock()
+
     }
 
     if req == "flush" {
@@ -148,19 +148,17 @@ func handler(w http.ResponseWriter, r *http.Request) {
     	defer writer.Flush()
 
     	mutex.Lock()
-    	for _, model := range myModels {
+    	
+		st := strings.Fields(strings.Trim(fmt.Sprint(theModel.GlobalWeights), "[]"))
+		st = append(st, "global")
+		writer.Write(st)
 
-    		st := strings.Fields(strings.Trim(fmt.Sprint(model.GlobalWeights), "[]"))
-    		st = append(st, "global")
-    		writer.Write(st)
-
-    		for node, modelState := range model.Clients {
-    			st := strings.Fields(strings.Trim(fmt.Sprint(modelState.Weights), "[]"))
-    			st = append(st, node)
-    			writer.Write(st)
-    		}       
-    	}
-
+		for node, modelState := range theModel.Clients {
+			st := strings.Fields(strings.Trim(fmt.Sprint(modelState.Weights), "[]"))
+			st = append(st, node)
+			writer.Write(st)
+		}       
+	
     	mutex.Unlock()
     	fmt.Fprintf(w, "Model flushed.")
 
@@ -228,8 +226,6 @@ func main() {
 	mutex = &sync.Mutex{}
 
 	myPorts = make(map[int]bool)
-	myModels = make(map[string]Model)
-	myValidators = make(map[string]Validator)
 
 	// Measured in ms.
 	samplingRate = 5000
@@ -248,8 +244,6 @@ func main() {
 	// setup the handler for the hidden service endpoint
 	go runRouter("127.0.0.1:5005")
 
-	go runSampler()
-
     // Keeps server running
 	select {}
 }
@@ -262,24 +256,17 @@ func runSampler() {
 
 		time.Sleep(time.Duration(samplingRate) * time.Millisecond)
 
-		_, exists := myModels["study"]
+		// hardcoded
+		mutex.Lock()
+		trainError, _ := testModel(theModel, "global")
 
-		if exists {
+		// Add the new error value at the back
+		lossProgress = append(lossProgress, trainError)
+		mutex.Unlock()
 
-			// hardcoded
-			mutex.Lock()
-			model := myModels["study"]
-			trainError, _ := testModel(model, "global")
-
-			// Add the new error value at the back
-			lossProgress = append(lossProgress, trainError)
-			mutex.Unlock()
-
-			if trainError < convergThreshold {
-				converged = true
-			}
-
-		}
+		if trainError < convergThreshold {
+			converged = true
+		}	
 
 	}
 
@@ -349,12 +336,12 @@ func processControlMsg(inData MessageData, Logger *govec.GoLog) []byte {
 
 		// Add new nodes
 		case "join":
-			puzzle := makePuzzle(inData.ModelId)
+			puzzle := makePuzzle()
 			outBuf = Logger.PrepareSend("Sending Puzzle", puzzle)
 
 		// curate a new model
 		case "curator":
-			ok = startModel(inData.ModelId, inData.NumFeatures, inData.MinClients)
+			ok = startModel(inData.NumFeatures, inData.MinClients)
 			if ok {
 		  		outBuf = Logger.PrepareSend("Replying", 1)
 			} else {
@@ -362,7 +349,7 @@ func processControlMsg(inData MessageData, Logger *govec.GoLog) []byte {
 			}				
 
 		case "solve":
-			ok = processJoin(inData.ModelId, inData.Key, inData.NumFeatures)
+			ok = processJoin(inData.Key, inData.NumFeatures)
 			if ok {
 				address, port := getFreeAddress()
 				go gradientWorker(inData.SourceNode, address, Logger)
@@ -397,8 +384,10 @@ func gradientWorker(nodeId string,
 	ln, err := net.ListenTCP("tcp", myaddr)
 	checkError(err)
 
-	buf := make([]byte, 131072)
-	outBuf := make([]byte, 131072)
+    // 4096 for credit is ok
+    // 131072 for MNIST
+	buf := make([]byte, 2048)
+	outBuf := make([]byte, 2048)
 	fmt.Printf("Listening for TCP....\n")
 
 	for {
@@ -413,46 +402,40 @@ func gradientWorker(nodeId string,
 		Logger.UnpackReceive("Received Message From Client", buf[0:], &inData)
 
 		puzzleKey := inData.Key
-		modelId := inData.ModelId
 
-		// random sleeps from 0 - 0.5 ms
+		// random sleeps from 0 - 0.1 ms
 		time.Sleep(time.Duration(100 * rand.Float64()) * time.Millisecond)
 		
 		mutex.Lock()
 
-		_, modelExists := myModels[modelId]
 		bufferReply := make([]float64, 0)
 
-		if modelExists {
+		_, clientExists := theModel.Clients[puzzleKey]
+		enoughClients := len(theModel.Clients) >= theModel.MinClients
 
-			_, clientExists := myModels[modelId].Clients[puzzleKey]
-			enoughClients := len(myModels[modelId].Clients) >= myModels[modelId].MinClients
+		if clientExists && enoughClients {
+			gradientUpdate(puzzleKey, inData.Deltas)
+		}
 
-			if clientExists && enoughClients {
-				gradientUpdate(puzzleKey, modelId, inData.Deltas)
+		// Hacky fix, but double check if thid client was kicked out at the last validation
+		_, clientExists = theModel.Clients[puzzleKey]
+		if clientExists && enoughClients {
+
+			clientState := theModel.Clients[puzzleKey]
+
+			if rand.Float64() > MULTICAST_RATE {
+				startValidation()
 			}
 
-			// Hacky fix, but double check if thid client was kicked out at the last validation
-			_, clientExists = myModels[modelId].Clients[puzzleKey]
-			if clientExists && enoughClients {
+			if isClientValidating(puzzleKey) {
+				bufferReply = clientState.Weights
+				clientState.IsComputingLocal = true
+			} else {
+				bufferReply =  theModel.GlobalWeights
+				clientState.IsComputingLocal = false
+			}
 
-				clientState := myModels[modelId].Clients[puzzleKey]
-
-				if rand.Float64() > MULTICAST_RATE {
-					startValidation(modelId)
-				}
-
-				if isClientValidating(modelId, puzzleKey) {
-					bufferReply = clientState.Weights
-					clientState.IsComputingLocal = true
-				} else {
-					bufferReply =  myModels[modelId].GlobalWeights
-					clientState.IsComputingLocal = false
-				}
-
-				myModels[modelId].Clients[puzzleKey] = clientState
-			} 
-
+			theModel.Clients[puzzleKey] = clientState
 		} 
 
 		mutex.Unlock()
@@ -488,13 +471,7 @@ func testModel(model Model, node string) (float64, float64) {
 	return trainErr, testErr
 }
 
-func startModel(modelId string, numFeatures int, minClients int) bool {
-
-	_, exists := myModels[modelId]
-	if exists {
-		fmt.Printf("Model %s already exists: \n", modelId)
-		return false
-	}
+func startModel(numFeatures int, minClients int) bool {
 
 	// Add model to map and set random weights
 	var newModel Model
@@ -508,12 +485,14 @@ func startModel(modelId string, numFeatures int, minClients int) bool {
     newModel.NumIterations = 0
 
 	mutex.Lock()
-	myModels[modelId] = newModel
+	theModel = newModel
 	mutex.Unlock()
-	fmt.Printf("Added a new model: %s\n", modelId)
+	fmt.Printf("Started new model! \n")
 
     pyAggInitFunc.CallFunction(python.PyInt_FromLong(minClients), 
         python.PyInt_FromLong(numFeatures))
+
+    go runSampler()
 
 	return true
 }
@@ -521,57 +500,39 @@ func startModel(modelId string, numFeatures int, minClients int) bool {
 /*
 	Generates a new cryptographic puzzle for a client to solve
 */
-func makePuzzle(modelId string) string {
+func makePuzzle() string {
 
-	_, exists := myModels[modelId]
-	if exists {
+	// Generate a problem based on the current time
+	timeHash := sha256.New()
+	timeHash.Write([]byte(time.Now().String()))
 
-		// Generate a problem based on the current time
-		timeHash := sha256.New()
-		timeHash.Write([]byte(time.Now().String()))
+	puzzle := hex.EncodeToString(timeHash.Sum(nil))
 
-		puzzle := hex.EncodeToString(timeHash.Sum(nil))
+	mutex.Lock()
+	theModel.Puzzles[puzzle] = "unsolved"
+	mutex.Unlock()
 
-		mutex.Lock()
-		theModel := myModels[modelId]
-		theModel.Puzzles[puzzle] = "unsolved"
-		myModels[modelId] = theModel
-		mutex.Unlock()
-
-		fmt.Printf("Made a new puzzle for model %s\n", modelId)
-		return puzzle
-
-	} 
-	
-	// Return an empty string for bad join
-	fmt.Printf("Bad Puzzle request for model %s\n", modelId)
-	return ""
+	fmt.Printf("Made a new puzzle for model \n")
+	return puzzle
 
 }
 
 // numFeature is just bootleg schema validation 
-func processJoin(modelId string, givenKey string, numFeatures int) bool {
+func processJoin(givenKey string, numFeatures int) bool {
 
 	fmt.Println("Got attempted puzzle solution")
 
-	// check if model exists
-	_, exists := myModels[modelId]
-	if !exists {
-		fmt.Printf("Rejected a fake join for model: %s\n", modelId)
-		return false
-	}
-
 	mutex.Lock()
-	theModel := myModels[modelId]
 	if numFeatures != theModel.NumFeatures {
-		fmt.Printf("Rejected an incorrect numFeatures for model: %s\n", modelId)
+		fmt.Printf("Rejected an incorrect numFeatures for model.\n")
 		mutex.Unlock()
 		return false
 	}
 
+    var exists bool
 	_, exists = theModel.Clients[givenKey]
 	if exists {
-		fmt.Printf("Node %.5s is already joined in model: %s \n", givenKey, modelId)
+		fmt.Printf("Node %.5s is already joined in model.\n", givenKey)
 		mutex.Unlock()
 		return false
 	}
@@ -579,29 +540,20 @@ func processJoin(modelId string, givenKey string, numFeatures int) bool {
 	// Verify the solution
 	for lock, key := range theModel.Puzzles {
 
-		hash := sha256.New()
+		if key == "unsolved" && verifyPuzzle(lock, givenKey, DEFAULT_JOIN_POW) {
 
-		if key == "unsolved" {
-
-			hash.Write([]byte(lock))
-			hash.Write([]byte(givenKey))
-			hashString := hex.EncodeToString(hash.Sum(nil))
+			// Add node
+			theModel.Clients[givenKey] = 
+				ClientState{0, 0, false, newRandomModel(numFeatures), 0}
+			fmt.Printf("Joined %.5s in model \n", givenKey)
 			
-			if strings.HasSuffix(hashString, "0000") {
+			// Write the solution
+			theModel.Puzzles[lock] = givenKey
 
-				// Add node
-				theModel.Clients[givenKey] = 
-					ClientState{0, 0, false, newRandomModel(numFeatures), 0}
-				fmt.Printf("Joined %.5s in model %s \n", givenKey, modelId)
-				
-				// Write the solution
-				theModel.Puzzles[lock] = givenKey
-				myModels[modelId] = theModel
-				mutex.Unlock()
+            // multiple exits, need to unlock
+			mutex.Unlock()
+			return true
 
-				return true
-
-			} 
 		} 
 	}
 
@@ -609,35 +561,50 @@ func processJoin(modelId string, givenKey string, numFeatures int) bool {
 	return false
 }
 
+func verifyPuzzle(lock string, givenKey string, difficulty int) bool {
 
-func gradientUpdate(puzzleKey string, modelId string, deltas []float64) {
+    var b bytes.Buffer
 
-	theModel := myModels[modelId]
+    for i := 0; i < difficulty; i++ {
+        b.WriteString("0")
+    }
+
+    trailing := b.String()
+
+    hash := sha256.New()
+    hash.Write([]byte(lock))
+    hash.Write([]byte(givenKey))
+    hashString := hex.EncodeToString(hash.Sum(nil))
+    
+    return strings.HasSuffix(hashString, trailing)
+
+}
+
+func gradientUpdate(puzzleKey string, deltas []float64) {
+
 	clientState := theModel.Clients[puzzleKey]
 
 	if clientState.IsComputingLocal {
 
 		// Just update the local copy of the model
-		validator := myValidators[modelId]
-		validatorWeights := validator.ClientResponses[puzzleKey]
+		validatorWeights := theValidator.ClientResponses[puzzleKey]
 
 		for j := 0; j < len(deltas); j++ {
 			validatorWeights[j] = deltas[j]
 			clientState.Weights[j] += deltas[j]
 		}
 
-		validator.ClientResponses[puzzleKey] = validatorWeights
-		validator.NumResponses++
+		theValidator.ClientResponses[puzzleKey] = validatorWeights
+		theValidator.NumResponses++
 		clientState.NumValidations++
-		myValidators[modelId] = validator
-		fmt.Printf("Validation update from %.5s on %s \n", puzzleKey, modelId)
+		fmt.Printf("Validation update from %.5s \n", puzzleKey)
 
 		scoreMap := make(map[string]float64)
 		isMulticast := false
-		if validator.NumResponses >= len(validator.ClientResponses) {
-			scoreMap = runValidation(modelId)
+		if theValidator.NumResponses >= len(theValidator.ClientResponses) {
+			scoreMap = runValidation()
 			isMulticast = true
-			delete(myValidators, modelId) 
+			theValidator.Exists = false
 		}
 
 		// Revert the client state
@@ -660,15 +627,13 @@ func gradientUpdate(puzzleKey string, modelId string, deltas []float64) {
 			}   
 		}
 
-		myModels[modelId] = theModel
-
 	} else {
 
         // Collect the update 
         if synchronous {
 
             theModel.TempGradients[puzzleKey] = deltas
-            fmt.Printf("Grad update from %.5s on %s \n", puzzleKey, modelId)
+            fmt.Printf("Grad update from %.5s \n", puzzleKey)
             clientState.NumIterations++
             theModel.Clients[puzzleKey] = clientState
 
@@ -720,9 +685,8 @@ func gradientUpdate(puzzleKey string, modelId string, deltas []float64) {
                 */
 
                 theModel.NumIterations++
-                fmt.Printf("Grad update %d on %s \n", theModel.NumIterations, modelId)
+                fmt.Printf("Grad update %d \n", theModel.NumIterations)
                 theModel.TempGradients = make(map[string][]float64)
-                myModels[modelId] = theModel
 
             } 
 
@@ -737,8 +701,7 @@ func gradientUpdate(puzzleKey string, modelId string, deltas []float64) {
             }
 
             theModel.NumIterations++
-            fmt.Printf("Grad update %d from %.5s on %s \n", theModel.NumIterations, puzzleKey, modelId)
-            myModels[modelId] = theModel
+            fmt.Printf("Grad update %d from %.5s \n", theModel.NumIterations, puzzleKey)
             
         }   
 					
@@ -747,11 +710,11 @@ func gradientUpdate(puzzleKey string, modelId string, deltas []float64) {
 	return
 }
 
-func runValidation(modelId string) map[string]float64 {
+func runValidation() map[string]float64 {
 
 	fmt.Printf("Running validation....\n")
 
-	truthModel := myValidators[modelId].ValidationModel
+	truthModel := theValidator.ValidationModel
 	truthArray := python.PyList_New(len(truthModel))
 
 	for i := 0; i < len(truthModel); i++ {
@@ -760,7 +723,7 @@ func runValidation(modelId string) map[string]float64 {
 
 	scores := make(map[string]float64)
 
-	for node, response := range myValidators[modelId].ClientResponses {
+	for node, response := range theValidator.ClientResponses {
 	
 		argArray := python.PyList_New(len(truthModel))
 
@@ -780,45 +743,41 @@ func runValidation(modelId string) map[string]float64 {
 
 }
 
-func kickoutNode(modelId string, nodeId string) {
+func kickoutNode(nodeId string) {
 
 	// Long and annoying atomic delete
-	theModel := myModels[modelId]
-	
 	clientStates := theModel.Clients
 	delete(clientStates, nodeId)
 	theModel.Clients = clientStates
-
 	delete(theModel.Puzzles, nodeId)
-	myModels[modelId] = theModel
 
 	fmt.Printf("Removed node %s from model\n", nodeId)
 
 }
 
 // Starts the validation multicast.
-func startValidation(modelId string) {
+func startValidation() {
 
-	_, exists := myValidators[modelId]
-	if !exists {
+	if !theValidator.Exists {
 
 		// Create new validator object
 		var valid Validator
-		valid.IsValidating = true
+		valid.Exists = true
+        valid.IsValidating = true
 		valid.NumResponses = 0
 		valid.ClientResponses = make(map[string][]float64)
-		valid.ValidationModel = myModels[modelId].GlobalWeights
+		valid.ValidationModel = theModel.GlobalWeights
 
 		// Add to global state
-		myValidators[modelId] = valid
+		theValidator = valid
 
-		for node, state := range myModels[modelId].Clients {
+		for node, state := range theModel.Clients {
 			state.IsComputingLocal = true
-			myModels[modelId].Clients[node] = state
-			valid.ClientResponses[node] = make([]float64, myModels[modelId].NumFeatures)
+			theModel.Clients[node] = state
+			valid.ClientResponses[node] = make([]float64, theModel.NumFeatures)
 		}
 
-		fmt.Printf("Setup Validation multicast for %d clients.\n", len(myModels[modelId].Clients))	
+		fmt.Printf("Setup Validation multicast for %d clients.\n", len(theModel.Clients))	
 	} 
 
 }
@@ -847,14 +806,12 @@ func getFreeAddress() (string, int) {
 	return "", 0
 }
 
-func isClientValidating(modelId string, node string) bool {
+func isClientValidating(node string) bool {
 	
-	_, exists := myValidators[modelId]
-	
-	// Short circuit?
-	return exists && 
-		myValidators[modelId].IsValidating &&
-		myModels[modelId].Clients[node].IsComputingLocal
+	// Short circuit
+	return theValidator.Exists && 
+		theValidator.IsValidating &&
+		theModel.Clients[node].IsComputingLocal
 
 }
 
