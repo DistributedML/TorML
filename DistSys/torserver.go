@@ -30,8 +30,15 @@ type MessageData struct {
 
 // Schema for data used in gradient updates
 type GradientData struct {
-	Key			  string
-	Deltas 		  []float64
+    Key           string
+    Solution      string
+    Deltas        []float64
+}
+
+type GradientReturnData struct {
+    NextHash        string
+    Difficulty      int
+    GlobalModel     []float64
 }
 
 type ClientState struct {
@@ -40,6 +47,8 @@ type ClientState struct {
 	IsComputingLocal 	bool
 	Weights 			[]float64
 	OutlierScore		float64
+    NextHash            string
+    HashDifficulty      int
 }
 
 // An active model: list of participants and weights
@@ -87,7 +96,7 @@ var (
     DEFAULT_JOIN_POW    int = 4
 
     // synchrony model
-    synchronous         bool = false
+    SYNCHRONOUS         bool = false
 
 	// Test Module for python
 	pyTestModule  *python.PyObject
@@ -129,6 +138,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
     		fmt.Fprintf(w, "%.5s iterations: %d\n", node, clientState.NumIterations)
     		fmt.Fprintf(w, "%.5s validations: %d\n", node, clientState.NumValidations)
     		fmt.Fprintf(w, "%.5s L2 outlier score: %f\n", node, clientState.OutlierScore)	
+            fmt.Fprintf(w, "%.5s Hash Difficulty: %d\n", node, clientState.HashDifficulty)   
     		fmt.Fprintf(w, "%.5s train Loss: %f\n", node, trainError)	
     		fmt.Fprintf(w, "%.5s test Loss: %f\n", node, testError)	
     	
@@ -275,6 +285,8 @@ func runSampler() {
 	// Write out the final value
 	lossFlush()
 
+    os.Exit(0)
+
 }
 
 func lossFlush() {
@@ -408,16 +420,26 @@ func gradientWorker(nodeId string,
 		
 		mutex.Lock()
 
-		bufferReply := make([]float64, 0)
+        bufferReply := make([]float64, 0)
 
+        // Check basic requirements
 		_, clientExists := theModel.Clients[puzzleKey]
 		enoughClients := len(theModel.Clients) >= theModel.MinClients
 
-		if clientExists && enoughClients {
-			gradientUpdate(puzzleKey, inData.Deltas)
+        // Check and update the puzzle
+        clientState := theModel.Clients[puzzleKey]        
+        solved := verifyPuzzle(clientState.NextHash, inData.Solution, clientState.HashDifficulty)
+
+        if clientExists && enoughClients && solved {
+            clientState.NextHash = clientState.NextHash + inData.Solution
+            gradientUpdate(puzzleKey, inData.Deltas)
 		}
 
-		// Hacky fix, but double check if thid client was kicked out at the last validation
+        // gradient update will update difficulty if needed
+        difficultyReply := clientState.HashDifficulty
+        hashReply := clientState.NextHash
+
+		// Hacky fix, but double check if this client was kicked out at the last validation
 		_, clientExists = theModel.Clients[puzzleKey]
 		if clientExists && enoughClients {
 
@@ -440,7 +462,12 @@ func gradientWorker(nodeId string,
 
 		mutex.Unlock()
 
-		outBuf = Logger.PrepareSend("Replying...", bufferReply)
+        var gradReply GradientReturnData
+        gradReply.NextHash = hashReply
+        gradReply.Difficulty = difficultyReply
+        gradReply.GlobalModel = bufferReply
+
+		outBuf = Logger.PrepareSend("Replying...", gradReply)
 	  	conn.Write(outBuf)
 
 	}
@@ -544,7 +571,7 @@ func processJoin(givenKey string, numFeatures int) bool {
 
 			// Add node
 			theModel.Clients[givenKey] = 
-				ClientState{0, 0, false, newRandomModel(numFeatures), 0}
+				ClientState{0, 0, false, newRandomModel(numFeatures), 0, lock + key, 1}
 			fmt.Printf("Joined %.5s in model \n", givenKey)
 			
 			// Write the solution
@@ -617,20 +644,28 @@ func gradientUpdate(puzzleKey string, deltas []float64) {
 			for node, roni := range scoreMap {
 				roniClientState := theModel.Clients[node]
 				roniClientState.OutlierScore += roni
-				theModel.Clients[node] = roniClientState
+				
 
 				if roniClientState.OutlierScore < THRESHOLD {
-					fmt.Printf("node %.5s has RONI %5f past THRESHOLD. KICKED! \n", node, roniClientState.OutlierScore)
+				    
+                    fmt.Printf("node %.5s has RONI %5f past THRESHOLD. UP! \n", node, roniClientState.OutlierScore)	
+                    roniClientState.HashDifficulty++
+                    roniClientState.OutlierScore = 0
+
+                    /*fmt.Printf("node %.5s has RONI %5f past THRESHOLD. KICKED! \n", node, roniClientState.OutlierScore)
 					delete(theModel.Clients, node)
-					delete(theModel.Puzzles, node)
+					delete(theModel.Puzzles, node)*/
 				}
+
+                theModel.Clients[node] = roniClientState
+
 			}   
 		}
 
 	} else {
 
         // Collect the update 
-        if synchronous {
+        if SYNCHRONOUS {
 
             theModel.TempGradients[puzzleKey] = deltas
             fmt.Printf("Grad update from %.5s \n", puzzleKey)
@@ -691,7 +726,7 @@ func gradientUpdate(puzzleKey string, deltas []float64) {
             } 
 
         } else {
-        
+
             // Asycnhronous, just apply the update
             dd := len(deltas)
 
@@ -701,6 +736,9 @@ func gradientUpdate(puzzleKey string, deltas []float64) {
             }
 
             theModel.NumIterations++
+            clientState.NumIterations++
+            theModel.Clients[puzzleKey] = clientState
+
             fmt.Printf("Grad update %d from %.5s \n", theModel.NumIterations, puzzleKey)
             
         }   

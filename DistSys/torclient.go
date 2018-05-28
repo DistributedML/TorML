@@ -37,7 +37,14 @@ type MessageData struct {
 // Schema for data used in gradient updates
 type GradientData struct {
 	Key			  string
+    Solution      string
 	Deltas 		  []float64
+}
+
+type GradientReturnData struct {
+    NextHash        string
+    Difficulty      int
+    GlobalModel     []float64
 }
 
 var (
@@ -47,8 +54,12 @@ var (
 	numFeatures     int
 	minClients      int
 	isLocal			bool
-	puzzleKey		string
+	
+    puzzleKey		string
 	pulledGradient  []float64
+    nextDifficulty  int
+    nextHash        string
+
 	torHost			string
 	torAddress		string
 	epsilon			float64
@@ -227,7 +238,8 @@ func sendGradMessage(logger *govec.GoLog,
 		var msg GradientData
 		if !bootstrapping {
 			msg.Key = puzzleKey
-			msg.Deltas, err = oneGradientStep(globalW)
+			msg.Solution = solvePuzzle(nextHash, nextDifficulty)
+            msg.Deltas, err = oneGradientStep(globalW)
 
 			if err != nil {
 				fmt.Println("Got a GoPython failure, retrying...")
@@ -258,13 +270,16 @@ func sendGradMessage(logger *govec.GoLog,
 			continue
 		}
 
-		var incomingMsg []float64
+		var incomingMsg GradientReturnData
 		logger.UnpackReceive("Received Message from server", inBuf[0:n], &incomingMsg)
 
 		conn.Close()
 
-		pulledGradient = incomingMsg
-		if (len(incomingMsg) > 0) {
+		pulledGradient = incomingMsg.GlobalModel
+        nextDifficulty = incomingMsg.Difficulty
+        nextHash = incomingMsg.NextHash
+
+		if (len(incomingMsg.GlobalModel) > 0) {
 			completed = true
 		} else {
 			time.Sleep(1 * time.Second)
@@ -294,6 +309,45 @@ func getServerConnection(torDialer proxy.Dialer, isGradient bool) (net.Conn, err
 
 }
 
+func solvePuzzle(puzzle string, difficulty int) string {
+
+    solved := false
+
+    var b bytes.Buffer
+    var solution string
+
+    for i := 0; i < difficulty; i++ {
+        b.WriteString("0")
+    }
+
+    trailing := b.String()
+
+    for !solved {
+
+        h := sha256.New()
+        h.Write([]byte(puzzle))
+
+        // Attempt a candidate
+        timeHash := sha256.New()
+        timeHash.Write([]byte(time.Now().String()))
+
+        solution = hex.EncodeToString(timeHash.Sum(nil))
+        h.Write([]byte(solution))
+
+        hashed := hex.EncodeToString(h.Sum(nil))
+        fmt.Println(hashed)
+
+        if strings.HasSuffix(hashed, trailing) {
+            fmt.Println("BINGO!")
+            solved = true
+        }
+
+    }
+
+    return solution
+
+}
+
 func sendJoinMessage(logger *govec.GoLog, torDialer proxy.Dialer) int {
 
 	conn, err := getServerConnection(torDialer, false)
@@ -318,32 +372,11 @@ func sendJoinMessage(logger *govec.GoLog, torDialer proxy.Dialer) int {
 	checkError(errRead)
 
 	var puzzle string 
-	var solution string
-	var solved bool
+	
 	logger.UnpackReceive("Received puzzle from server", inBuf[0:n], &puzzle)
 	conn.Close()
 
-	for !solved {
-
-		h := sha256.New()
-		h.Write([]byte(puzzle))
-
-		// Attempt a candidate
-		timeHash := sha256.New()
-		timeHash.Write([]byte(time.Now().String()))
-
-		solution = hex.EncodeToString(timeHash.Sum(nil))
-	    h.Write([]byte(solution))
-
-	    hashed := hex.EncodeToString(h.Sum(nil))
-	    fmt.Println(hashed)
-
-		if strings.HasSuffix(hashed, "0000") {
-		    fmt.Println("BINGO!")
-		    solved = true
-		}
-
-	}
+	solution := solvePuzzle(puzzle, 4)
 
 	conn, err = getServerConnection(torDialer, false)
 	checkError(err)
