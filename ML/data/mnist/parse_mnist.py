@@ -56,6 +56,47 @@ def main():
 
     pdb.set_trace()
 
+def slice_uniform():
+
+    mndata = MNIST('.')
+
+    images, labels = mndata.load_training()
+    images_test, labels_test = mndata.load_testing()
+
+    n = len(images)
+    d = len(images[0])
+    t = len(images_test)
+
+    Xtrain = np.zeros((n, d))
+    Xtest = np.zeros((t, d))
+
+    ytrain = np.asarray(labels)
+    ytest = np.asarray(labels_test)
+
+    for i in range(n):
+        Xtrain[i, :] = np.asarray(images[i])
+
+    for q in range(t):
+        Xtest[q, :] = np.asarray(images_test[q])
+
+    # standardize each column
+    print("Standardize columns")
+    Xtrain = Xtrain / 100.0
+    # Xtrain, _, _ = standardize_cols(Xtrain)
+    # Xtest, _, _ = standardize_cols(Xtest)
+
+    for k in range(10):
+
+        randIdx = np.random.permutation(n)[0:5000]
+
+        class_slice = Xtrain[randIdx]
+        data_slice = np.hstack((class_slice, ytrain[randIdx][:, None]))
+
+        print("slice " + str(k) + " is shape " + str(data_slice.shape))
+        np.save("mnist_unif" + str(k), data_slice)
+
+    pdb.set_trace()
+
 
 def slice_for_tm():
 
@@ -127,4 +168,4 @@ def standardize_cols(X, mu=None, sigma=None):
 
 if __name__ == "__main__":
 
-    slice_for_tm()
+    slice_uniform()

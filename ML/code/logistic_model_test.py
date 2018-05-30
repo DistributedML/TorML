@@ -9,6 +9,13 @@ Xtest, ytest = data['X'], data['y']
 data = utils.load_dataset("credit/credittrain")
 XBin, yBin = data['X'], data['y']
 
+def init(kk, dd):
+        
+    global num_classes
+    num_classes = kk
+
+    global num_features
+    num_features = dd
 
 def train_error(ww):
     ww = np.array(ww)

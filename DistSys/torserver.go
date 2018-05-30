@@ -88,7 +88,7 @@ var (
 	theValidator	 	Validator
 
     // Inverse rate of multicast. Set to > 1 if you want to disable
-	MULTICAST_RATE		float64 = 0.9
+	MULTICAST_RATE		float64 = 1.1
 	
 	// Kick a client out after 2% of RONI
 	THRESHOLD			float64 = -0.05
@@ -105,6 +105,7 @@ var (
 	pyRoniFunc    *python.PyObject
 	pyPlotFunc    *python.PyObject
     pyAggInitFunc *python.PyObject
+    pyTestInitFunc *python.PyObject
 
 	pyAggModule   *python.PyObject
 	pyKrumFunc    *python.PyObject
@@ -220,6 +221,7 @@ func pyInit() {
 	pyKrumFunc = pyAggModule.GetAttrString("krum")
     pyAvgFunc = pyAggModule.GetAttrString("average")
     
+    pyTestInitFunc = pyTestModule.GetAttrString("init")
 	pyTrainFunc = pyTestModule.GetAttrString("train_error")
 	pyTestFunc = pyTestModule.GetAttrString("test_error")
 	pyRoniFunc = pyTestModule.GetAttrString("roni")
@@ -238,10 +240,10 @@ func main() {
 	myPorts = make(map[int]bool)
 
 	// Measured in ms.
-	samplingRate = 5000
+	samplingRate = 1000
 
 	// What loss until you claim convergence?
-	convergThreshold = 0.005
+	convergThreshold = 0.01
 
 	// Make ports 6000 to 6010 available
 	for i := 6000; i <= 6010; i++ {
@@ -396,7 +398,7 @@ func gradientWorker(nodeId string,
 	ln, err := net.ListenTCP("tcp", myaddr)
 	checkError(err)
 
-    // 4096 for credit is ok
+    // 2048 for credit is ok
     // 131072 for MNIST
 	buf := make([]byte, 2048)
 	outBuf := make([]byte, 2048)
@@ -515,6 +517,9 @@ func startModel(numFeatures int, minClients int) bool {
 	theModel = newModel
 	mutex.Unlock()
 	fmt.Printf("Started new model! \n")
+
+    pyTestInitFunc.CallFunction(python.PyInt_FromLong(10), 
+        python.PyInt_FromLong(784))
 
     pyAggInitFunc.CallFunction(python.PyInt_FromLong(minClients), 
         python.PyInt_FromLong(numFeatures))

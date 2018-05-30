@@ -226,14 +226,24 @@ func sendGradMessage(logger *govec.GoLog,
 	// prevents the screen from overflowing and freezing
 	time.Sleep(100 * time.Millisecond)		
 
+    retry := 0
+
 	for !completed {
 
 		conn, err := getServerConnection(torDialer, true)
 		if err != nil {
 			fmt.Println("Got a Dial failure, retrying...")
+            retry++
 			time.Sleep(100 * time.Millisecond)		
+
+            if (retry > 4) {
+                os.Exit(1)
+            }
+
 			continue
 		}
+
+        retry = 0
 
 		var msg GradientData
 		if !bootstrapping {
