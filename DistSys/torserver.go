@@ -88,7 +88,7 @@ var (
 	theValidator	 	Validator
 
     // Inverse rate of multicast. Set to > 1 if you want to disable
-	MULTICAST_RATE		float64 = 0.9
+	MULTICAST_RATE		float64 = 0.95
 	
 	// Kick a client out after 2% of RONI
 	THRESHOLD			float64 = -0.02
@@ -240,7 +240,7 @@ func main() {
 	myPorts = make(map[int]bool)
 
 	// Measured in ms.
-	samplingRate = 1000
+	samplingRate = 100
 
 	// What loss until you claim convergence?
 	convergThreshold = 0.01
