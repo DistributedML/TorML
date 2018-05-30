@@ -41,16 +41,17 @@ go get github.com/gonum/matrix/mat64
 echo "go python"
 go get github.com/sbinet/go-python
 
-
 ##TODO Probably install python
+echo "pkg-config"
+apt-get install -y pkg-config
+echo "pip"
+apt install python-pip
 echo "pandas"
 pip install pandas
 echo "emcee"
 pip install emcee
 echo "utils"
 pip install utils
-echo "pdb"
-pip install pdb
 
 
 #install tor
