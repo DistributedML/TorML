@@ -88,10 +88,10 @@ var (
 	theValidator	 	Validator
 
     // Inverse rate of multicast. Set to > 1 if you want to disable
-	MULTICAST_RATE		float64 = 1.1
+	MULTICAST_RATE		float64 = 0.9
 	
 	// Kick a client out after 2% of RONI
-	THRESHOLD			float64 = -0.05
+	THRESHOLD			float64 = -0.02
 
     DEFAULT_JOIN_POW    int = 4
 
