@@ -9,7 +9,10 @@ Everything is stored in two directories: DistSys (in Golang, all the distributed
 We use [go-python](https://github.com/sbinet/go-python) to link the two.
 
 Before running the system, all machines need to have tor installed.   
-https://www.torproject.org/projects/torbrowser.html.en
+https://www.torproject.org/projects/torbrowser.html.en 
+
+If your ISP blocks Tor, a mirror is available here:
+https://thetorproject.github.io/gettor/ 
 
 Once Tor is installed, the service machine needs to open up the hidden service. Do this by modifying the torrc (config file).  
 I found this file in: <tor_dir>/Browser/TorBrowser/Data/Tor
@@ -31,12 +34,20 @@ Add one HiddenServicePort for every connection you want the tor server to handle
 On server machine:  
 `go run torserver.go`
 
-On client machines:  
-`go run torcurator.go curatorName studyName`
-`go run torclient.go node1 studyName datasetName epsilon isLocal`
-`go run torclient.go node2 studyName datasetName epsilon isLocal`
-`go run torclient.go node3 studyName datasetName epsilon isLocal`
+On each client machines:  
+`go run torcurator.go curatorName minClients isLocal`  
+`go run torclient.go node1 datasetName epsilon isLocal`  
+`go run torclient.go node2 datasetName epsilon isLocal`  
+`go run torclient.go node3 datasetName epsilon isLocal`  
 
 A good test set is the credit dataset: 
-studyName = 'study'
 and use: credit1, credit2, creditbad.... etc.
+
+An example deployment, 3 clients, with epsilon=1, running through Tor:
+`go run torserver.go`  
+`go run torcurator.go c1 3`  
+`go run torclient.go h1 credit1 1`  
+`go run torclient.go h2 credit2 1`  
+`go run torclient.go h3 credit3 1`  
+
+
