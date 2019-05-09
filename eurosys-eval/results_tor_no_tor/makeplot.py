@@ -4,7 +4,7 @@ import pdb
 
 if __name__ == "__main__":
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(10,5))
 
     for clients in (10, 50, 100, 200):
 
@@ -42,4 +42,5 @@ if __name__ == "__main__":
     plt.setp(ax.get_xticklabels(), fontsize=18)
     plt.setp(ax.get_yticklabels(), fontsize=18)
 
+    plt.tight_layout()
     plt.show()

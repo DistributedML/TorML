@@ -4,7 +4,7 @@ import pdb
 
 if __name__ == "__main__":
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(10,5))
 
     data1 = np.loadtxt("loss_10_hot_timed.csv", delimiter=',')
     data2 = np.loadtxt("loss_50_hot_timed.csv", delimiter=',')
@@ -38,5 +38,5 @@ if __name__ == "__main__":
     plt.setp(ax.get_xticklabels(), fontsize=18)
     plt.setp(ax.get_yticklabels(), fontsize=18)
 
-
+    plt.tight_layout()
     plt.show()

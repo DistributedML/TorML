@@ -10,7 +10,7 @@ if __name__ == "__main__":
     data5 = np.loadtxt("loss_e1_fp.csv", delimiter=',')
     data6 = np.loadtxt("loss_e5_fp.csv", delimiter=',')
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(10,5))
 
     plt.plot(data5, color="black", label=r'$\varepsilon$ = 1', lw=5)
     plt.plot(data6, color="red", label=r'$\varepsilon$ = 5', lw=5)
@@ -30,4 +30,5 @@ if __name__ == "__main__":
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
 
+    plt.tight_layout()
     plt.show()
