@@ -1,6 +1,36 @@
 # TorMentor
 A collaborative machine learning framework that operates through Tor.
 
+# Publications
+
+* TorMentor is described as part of a paper on *brokered learning*: 
+  
+  [*Brokered Agreements in Multi-Party Machine Learning*](https://www.cs.ubc.ca/~bestchai/papers/apsys19-brokering.pdf). Clement Fung, Ivan Beschastnikh. APSys 2019
+    ```
+    @inproceedings{Fung2019,
+      author = {Fung, Clement and Beschastnikh, Ivan},
+      title = {{Brokered Agreements in Multi-Party Machine Learning}},
+      year = {2019},
+      doi = {10.1145/3343737.3343744},
+      booktitle = {Proceedings of the 10th ACM SIGOPS Asia-Pacific Workshop on Systems (APSys)},
+      pages = {69–75},
+    }
+    ```
+
+* TorMentor is further detailed in an Arxiv paper:
+  
+  [Dancing in the Dark: Private Multi-Party Machine Learning in an Untrusted Setting](https://arxiv.org/abs/1811.09712v2). Clement Fung, Jamie Koerner, Stewart Grant, Ivan Beschastnikh. 
+    ```
+    @article{DBLP:journals/corr/abs-1811-09712,
+      author    = {Clement Fung and Jamie Koerner and Stewart Grant and Ivan Beschastnikh},
+      title     = {{Dancing in the Dark: Private Multi-Party Machine Learning in an Untrusted Setting}},
+      journal   = {CoRR},
+      volume    = {abs/1811.09712},
+      year      = {2018},
+    }
+    ```
+
+
 # Talks and Presentations 
 May 11th - UBC Cybersecurity Summit: [Talk](presentations/CyberSecuritySummit-05-11-2018.pdf) [Poster](presentations/TorMentor-Poster-Print.pdf)
 
